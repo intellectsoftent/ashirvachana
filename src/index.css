@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 35 30% 97%;
+    --foreground: 15 30% 12%;
+
+    --card: 35 40% 96%;
+    --card-foreground: 15 30% 12%;
+
+    --popover: 35 30% 97%;
+    --popover-foreground: 15 30% 12%;
+
+    --primary: 30 85% 50%;
+    --primary-foreground: 40 100% 98%;
+
+    --secondary: 35 50% 90%;
+    --secondary-foreground: 15 40% 20%;
+
+    --muted: 35 25% 92%;
+    --muted-foreground: 15 10% 45%;
+
+    --accent: 15 70% 35%;
+    --accent-foreground: 40 100% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 30 30% 85%;
+    --input: 30 30% 85%;
+    --ring: 30 85% 50%;
+
+    --radius: 0.75rem;
+
+    --gold: 43 90% 55%;
+    --gold-foreground: 40 100% 98%;
+    --saffron: 25 95% 55%;
+    --saffron-foreground: 40 100% 98%;
+    --maroon: 0 60% 25%;
+    --maroon-foreground: 40 100% 95%;
+    --cream: 40 60% 95%;
+    --temple-brown: 20 40% 22%;
+
+    --gradient-sacred: linear-gradient(135deg, hsl(30, 85%, 50%), hsl(25, 95%, 55%), hsl(0, 60%, 25%));
+    --gradient-warm: linear-gradient(180deg, hsl(35, 30%, 97%) 0%, hsl(35, 50%, 90%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(43, 90%, 55%), hsl(30, 85%, 50%));
+    --gradient-hero: linear-gradient(135deg, hsl(0, 60%, 25%) 0%, hsl(20, 40%, 22%) 40%, hsl(25, 50%, 30%) 100%);
+    --shadow-warm: 0 4px 24px -4px hsl(30 85% 50% / 0.2);
+    --shadow-card: 0 8px 32px -8px hsl(20 40% 22% / 0.12);
+    --shadow-elevated: 0 20px 60px -15px hsl(20 40% 22% / 0.2);
+
+    --sidebar-background: 20 40% 22%;
+    --sidebar-foreground: 40 60% 95%;
+    --sidebar-primary: 30 85% 50%;
+    --sidebar-primary-foreground: 40 100% 98%;
+    --sidebar-accent: 20 35% 28%;
+    --sidebar-accent-foreground: 40 60% 95%;
+    --sidebar-border: 20 30% 30%;
+    --sidebar-ring: 30 85% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  .text-gradient-sacred {
+    background: var(--gradient-sacred);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-gradient-sacred {
+    background: var(--gradient-sacred);
+  }
+
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .bg-gradient-gold {
+    background: var(--gradient-gold);
+  }
+
+  .bg-gradient-warm {
+    background: var(--gradient-warm);
+  }
+
+  .shadow-warm {
+    box-shadow: var(--shadow-warm);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .ornament-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .ornament-divider::before,
+  .ornament-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--gold)), transparent);
+  }
+
+  .glow-saffron {
+    box-shadow: 0 0 40px hsl(30 85% 50% / 0.3), 0 0 80px hsl(25 95% 55% / 0.15);
+  }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 3s ease-in-out infinite;
+  }
+
+  .animate-glow-pulse {
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 20px hsl(30 85% 50% / 0.2); }
+  50% { box-shadow: 0 0 40px hsl(30 85% 50% / 0.4), 0 0 80px hsl(25 95% 55% / 0.2); }
+}
