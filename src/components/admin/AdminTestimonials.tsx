@@ -4,37 +4,63 @@ import { Plus, Pencil, Trash2, X, Save, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAdmin } from "@/context/AdminContext";
-import type { Testimonial } from "@/data/testimonials";
+import { useToast } from "@/hooks/use-toast";
 
-const emptyTestimonial: Omit<Testimonial, "id"> = {
-  name: "", location: "", language: "", title: "", text: "", rating: 5,
+const emptyForm = {
+  name: "", location: "", language: "", title: "", review_text: "", rating: 5,
 };
 
 const AdminTestimonials = () => {
   const { testimonials, addTestimonial, updateTestimonial, deleteTestimonial } = useAdmin();
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [form, setForm] = useState<Omit<Testimonial, "id">>(emptyTestimonial);
+  const [form, setForm] = useState(emptyForm);
+  const { toast } = useToast();
 
-  const handleEdit = (t: Testimonial) => { setEditing(t.id); setForm({ ...t }); setIsAdding(false); };
+  const handleEdit = (t: any) => {
+    setEditing(t.id);
+    setForm({
+      name: t.name || "",
+      location: t.location || "",
+      language: t.language || "",
+      title: t.title || "",
+      review_text: t.review_text || t.text || "",
+      rating: t.rating || 5,
+    });
+    setIsAdding(false);
+  };
 
-  const handleSave = () => {
-    if (isAdding) {
-      addTestimonial({ ...form, id: `t-${Date.now()}` } as Testimonial);
-    } else if (editing) {
-      updateTestimonial(editing, form);
+  const handleSave = async () => {
+    try {
+      if (isAdding) {
+        await addTestimonial(form);
+        toast({ title: "Testimonial added" });
+      } else if (editing) {
+        await updateTestimonial(editing, form);
+        toast({ title: "Testimonial updated" });
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
     }
     setEditing(null);
     setIsAdding(false);
-    setForm(emptyTestimonial);
+    setForm(emptyForm);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Delete this testimonial?")) deleteTestimonial(id);
+  const handleDelete = async (id: string | number) => {
+    if (!window.confirm("Delete this testimonial?")) return;
+    try {
+      await deleteTestimonial(id);
+      toast({ title: "Testimonial deleted" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
   };
 
-  const startAdd = () => { setIsAdding(true); setEditing("new"); setForm(emptyTestimonial); };
-  const cancel = () => { setEditing(null); setIsAdding(false); setForm(emptyTestimonial); };
+  const startAdd = () => { setIsAdding(true); setEditing("new"); setForm(emptyForm); };
+  const cancel = () => { setEditing(null); setIsAdding(false); setForm(emptyForm); };
+
+  const getText = (t: any) => t.review_text || t.text || "";
 
   return (
     <div>
@@ -73,7 +99,7 @@ const AdminTestimonials = () => {
               ))}
               <div className="md:col-span-2">
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Review Text</label>
-                <textarea value={form.text} onChange={(e) => setForm((f) => ({ ...f, text: e.target.value }))} rows={3} className="w-full rounded-lg bg-secondary/50 border border-border p-3 font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                <textarea value={form.review_text} onChange={(e) => setForm((f) => ({ ...f, review_text: e.target.value }))} rows={3} className="w-full rounded-lg bg-secondary/50 border border-border p-3 font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Rating (1-5)</label>
@@ -97,25 +123,25 @@ const AdminTestimonials = () => {
       </AnimatePresence>
 
       <div className="space-y-3">
-        {testimonials.map((t, i) => (
+        {testimonials.map((t: any, i: number) => (
           <motion.div
-            key={t.id}
+            key={String(t.id)}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.04 }}
             className="flex items-start gap-4 p-4 bg-card rounded-xl shadow-card border border-border hover:border-primary/20 transition-colors"
           >
             <div className="w-12 h-12 rounded-full bg-gradient-gold flex items-center justify-center text-primary-foreground font-display font-bold text-lg flex-shrink-0">
-              {t.name.charAt(0)}
+              {(t.name || "?").charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="font-display text-sm font-semibold text-foreground">{t.title}</h4>
-              <p className="font-body text-xs text-muted-foreground mt-1 line-clamp-2">"{t.text}"</p>
+              <p className="font-body text-xs text-muted-foreground mt-1 line-clamp-2">"{getText(t)}"</p>
               <div className="flex items-center gap-3 mt-2">
                 <span className="font-body text-xs text-foreground font-medium">{t.name}</span>
                 <span className="font-body text-xs text-muted-foreground">{t.location}</span>
                 <div className="flex gap-0.5">
-                  {Array.from({ length: t.rating }).map((_, j) => (
+                  {Array.from({ length: t.rating || 0 }).map((_, j) => (
                     <Star key={j} className="w-3 h-3 fill-gold text-gold" />
                   ))}
                 </div>

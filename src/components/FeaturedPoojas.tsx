@@ -8,8 +8,8 @@ const FeaturedPoojas = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
-  const { poojas } = useAdmin();
-  const featured = poojas.slice(0, 5);
+  const { poojas = [] } = useAdmin();
+  const featured = (poojas || []).slice(0, 5);
 
   const checkScroll = () => {
     if (scrollRef.current) {
@@ -70,7 +70,7 @@ const FeaturedPoojas = () => {
               >
                 <Link to={`/poojas/${item.id}`}>
                   <div className="relative rounded-2xl overflow-hidden shadow-card">
-                    <img src={item.image} alt={item.title} className="w-72 h-96 object-cover transition-transform duration-700 group-hover:scale-110" />
+                    <img src={item.image_url || item.image} alt={item.title} className="w-72 h-96 object-cover transition-transform duration-700 group-hover:scale-110" />
                     <div className="absolute inset-0 bg-gradient-to-t from-temple-brown/90 via-transparent to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-6">
                       <h3 className="font-display text-xl font-bold text-gold-foreground">{item.title}</h3>

@@ -1,18 +1,33 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, User, Phone, Sparkles } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Mail, Lock, User, Phone, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useUser } from "@/context/UserContext";
+import { useToast } from "@/hooks/use-toast";
 import logoIcon from "@/assets/logo-icon.jpeg";
 import mandalaPattern from "@/assets/mandala-pattern.jpg";
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", password: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const { signup } = useUser();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    const success = await signup(formData);
+    setSubmitting(false);
+    if (success) {
+      toast({ title: "Account created! 🙏", description: "Welcome to Ashirvachana." });
+      navigate("/");
+    } else {
+      toast({ title: "Signup failed", description: "Please try again or use a different email.", variant: "destructive" });
+    }
   };
 
   const update = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -56,6 +71,7 @@ const Signup = () => {
                     value={formData[f.key as keyof typeof formData]}
                     onChange={update(f.key)}
                     className="pl-11 h-12 bg-secondary/50 border-border font-body"
+                    required
                   />
                 </div>
               </motion.div>
@@ -71,6 +87,7 @@ const Signup = () => {
                   value={formData.password}
                   onChange={update("password")}
                   className="pl-11 pr-11 h-12 bg-secondary/50 border-border font-body"
+                  required
                 />
                 <button
                   type="button"
@@ -83,9 +100,13 @@ const Signup = () => {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
-              <Button type="submit" className="w-full h-12 bg-gradient-gold text-primary-foreground font-body font-semibold text-base hover:opacity-90 glow-saffron mt-2">
-                <Sparkles className="w-5 h-5 mr-2" />
-                Create Account
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full h-12 bg-gradient-gold text-primary-foreground font-body font-semibold text-base hover:opacity-90 glow-saffron mt-2"
+              >
+                {submitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
+                {submitting ? "Creating account..." : "Create Account"}
               </Button>
             </motion.div>
           </form>

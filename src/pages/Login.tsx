@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUser } from "@/context/UserContext";
@@ -13,18 +13,21 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const { login } = useUser();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(email, password);
+    setSubmitting(true);
+    const success = await login(email, password);
+    setSubmitting(false);
     if (success) {
       toast({ title: "Welcome back! 🙏", description: "You have been logged in successfully." });
       navigate("/");
     } else {
-      toast({ title: "Invalid credentials", description: "Use user@test.com / password123", variant: "destructive" });
+      toast({ title: "Invalid credentials", description: "Please check your email and password.", variant: "destructive" });
     }
   };
 
@@ -35,7 +38,6 @@ const Login = () => {
         <img src={mandalaPattern} alt="" className="absolute inset-0 w-full h-full object-cover opacity-10" />
         <div className="absolute inset-0 bg-gradient-to-br from-maroon/90 via-temple-brown/80 to-maroon/90" />
         
-        {/* Floating particles */}
         {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
@@ -106,6 +108,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-11 h-12 bg-secondary/50 border-border font-body"
+                  required
                 />
               </div>
             </motion.div>
@@ -120,6 +123,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-11 pr-11 h-12 bg-secondary/50 border-border font-body"
+                  required
                 />
                 <button
                   type="button"
@@ -140,9 +144,13 @@ const Login = () => {
             </div>
 
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-              <Button type="submit" className="w-full h-12 bg-gradient-gold text-primary-foreground font-body font-semibold text-base hover:opacity-90 transition-all glow-saffron">
-                <Sparkles className="w-5 h-5 mr-2" />
-                Sign In
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full h-12 bg-gradient-gold text-primary-foreground font-body font-semibold text-base hover:opacity-90 transition-all glow-saffron"
+              >
+                {submitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
+                {submitting ? "Signing in..." : "Sign In"}
               </Button>
             </motion.div>
           </form>

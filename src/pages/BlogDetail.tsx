@@ -8,7 +8,7 @@ import Footer from "@/components/Footer";
 const BlogDetail = () => {
   const { id } = useParams();
   const { blogs } = useAdmin();
-  const blog = blogs.find((b) => b.id === id);
+  const blog = blogs.find((b) => String(b.id) === id);
 
   if (!blog) {
     return (
@@ -45,7 +45,7 @@ const BlogDetail = () => {
             initial={{ scale: 1.15 }}
             animate={{ scale: 1 }}
             transition={{ duration: 1.5, ease: "easeOut" }}
-            src={blog.image}
+            src={blog.image_url || blog.image}
             alt={blog.title}
             className="w-full h-full object-cover"
             onError={(e) => {
@@ -106,7 +106,7 @@ const BlogDetail = () => {
                   {blog.category}
                 </motion.span>
                 <span className="font-body text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" /> {blog.readTime}
+                  <Clock className="w-3.5 h-3.5" /> {blog.read_time || blog.readTime}
                 </span>
               </div>
 
@@ -155,7 +155,7 @@ const BlogDetail = () => {
 
             {/* Article Body */}
             <div className="p-6 md:p-10">
-              {blog.content.split("\n\n").map((paragraph, i) => (
+              {(blog.content || "").split("\n\n").map((paragraph, i) => (
                 <motion.p
                   key={i}
                   initial={{ opacity: 0, y: 12 }}
@@ -169,7 +169,7 @@ const BlogDetail = () => {
             </div>
 
             {/* Tags */}
-            {blog.tags.length > 0 && (
+            {(blog.tags || []).length > 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -178,7 +178,7 @@ const BlogDetail = () => {
               >
                 <div className="flex items-center gap-2 flex-wrap pt-6 border-t border-border">
                   <Tag className="w-4 h-4 text-muted-foreground" />
-                  {blog.tags.map((tag) => (
+                  {(blog.tags || []).map((tag) => (
                     <motion.span
                       key={tag}
                       whileHover={{ scale: 1.05 }}
@@ -218,7 +218,7 @@ const BlogDetail = () => {
                       <div className="bg-card rounded-2xl overflow-hidden shadow-card border border-border hover:border-primary/30 hover:shadow-elevated transition-all duration-500">
                         <div className="relative h-40 overflow-hidden">
                           <img
-                            src={rb.image}
+                            src={rb.image_url || rb.image}
                             alt={rb.title}
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                             onError={(e) => {
@@ -232,7 +232,7 @@ const BlogDetail = () => {
                             <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-body font-semibold">
                               {rb.category}
                             </span>
-                            <span className="font-body text-[10px] text-muted-foreground">{rb.readTime}</span>
+                            <span className="font-body text-[10px] text-muted-foreground">{rb.read_time || rb.readTime}</span>
                           </div>
                           <h4 className="font-display text-sm font-semibold text-foreground group-hover:text-primary transition-colors leading-snug">
                             {rb.title}

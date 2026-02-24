@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutDashboard, BookOpen, Gem, MessageSquare, FileText, LogOut, Home, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, BookOpen, Gem, MessageSquare, FileText, LogOut, Home, ChevronLeft, ChevronRight, ShoppingBag, MapPin, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAdmin } from "@/context/AdminContext";
 import { useOrders } from "@/context/OrderContext";
@@ -10,6 +10,8 @@ import AdminIdols from "@/components/admin/AdminIdols";
 import AdminTestimonials from "@/components/admin/AdminTestimonials";
 import AdminBlogs from "@/components/admin/AdminBlogs";
 import AdminOrders from "@/components/admin/AdminOrders";
+import AdminLocations from "@/components/admin/AdminLocations";
+import AdminPujari from "@/components/admin/AdminPujari";
 import logoIcon from "@/assets/logo-ashirvachana.png";
 
 const sidebarItems = [
@@ -19,6 +21,8 @@ const sidebarItems = [
   { id: "idols", label: "Idols", icon: Gem },
   { id: "blogs", label: "Blog Posts", icon: FileText },
   { id: "testimonials", label: "Testimonials", icon: MessageSquare },
+  { id: "locations", label: "Locations", icon: MapPin },
+  { id: "pujari", label: "Pujari Master", icon: User },
 ];
 
 const AdminDashboard = () => {
@@ -154,7 +158,7 @@ const AdminDashboard = () => {
             {sidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
           </motion.button>
           <h1 className="font-display text-lg font-bold text-foreground capitalize">
-            {activeTab === "dashboard" ? "Dashboard Overview" : activeTab === "orders" ? "Booked Orders" : `Manage ${activeTab}`}
+            {activeTab === "dashboard" ? "Dashboard Overview" : activeTab === "orders" ? "Booked Orders" : activeTab === "pujari" ? "Pujari Master" : activeTab === "locations" ? "Location Master" : `Manage ${activeTab}`}
           </h1>
         </motion.header>
 
@@ -220,6 +224,8 @@ const AdminDashboard = () => {
               {activeTab === "idols" && <AdminIdols />}
               {activeTab === "blogs" && <AdminBlogs />}
               {activeTab === "testimonials" && <AdminTestimonials />}
+              {activeTab === "locations" && <AdminLocations />}
+              {activeTab === "pujari" && <AdminPujari />}
             </motion.div>
           </AnimatePresence>
         </div>

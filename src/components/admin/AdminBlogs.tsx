@@ -5,48 +5,73 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAdmin } from "@/context/AdminContext";
-import type { Blog } from "@/data/blogs";
+import { useToast } from "@/hooks/use-toast";
+import { toArray } from "@/lib/normalize";
+import { buildFormData } from "@/lib/formdata";
+import ImageUploadField from "./ImageUploadField";
 
-const emptyBlog: Omit<Blog, "id"> = {
-  title: "", excerpt: "", content: "", category: "Rituals", image: "",
-  author: "", date: new Date().toISOString().split("T")[0], readTime: "5 min read", tags: [],
+const emptyForm = {
+  title: "", excerpt: "", full_content: "", category: "Rituals", image_url: "",
+  author: "", date: new Date().toISOString().split("T")[0], read_time: "5 min read", tags: [] as string[],
 };
 
 const AdminBlogs = () => {
   const { blogs, addBlog, updateBlog, deleteBlog } = useAdmin();
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [form, setForm] = useState<Omit<Blog, "id">>(emptyBlog);
+  const [form, setForm] = useState(emptyForm);
   const [tagInput, setTagInput] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const { toast } = useToast();
 
-  const handleEdit = (blog: Blog) => {
+  const handleEdit = (blog: any) => {
     setEditing(blog.id);
-    setForm({ ...blog });
+    setForm({
+      title: blog.title || "",
+      excerpt: blog.excerpt || "",
+      full_content: blog.full_content || blog.content || "",
+      category: blog.category || "Rituals",
+      image_url: blog.image_url || blog.image || "",
+      author: blog.author || "",
+      date: blog.date || new Date().toISOString().split("T")[0],
+      read_time: blog.read_time || blog.readTime || "5 min read",
+      tags: toArray(blog.tags),
+    });
+    setImageFile(null);
     setIsAdding(false);
   };
 
-  const handleSave = () => {
-    if (form.content.length < 500) {
-      alert("Blog content must be at least 500 characters long.");
-      return;
-    }
-    if (isAdding) {
-      const id = form.title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-      addBlog({ ...form, id } as Blog);
-    } else if (editing) {
-      updateBlog(editing, form);
+  const handleSave = async () => {
+    try {
+      const body = imageFile ? buildFormData(form, imageFile) : form;
+      if (isAdding) {
+        await addBlog(body);
+        toast({ title: "Blog published successfully" });
+      } else if (editing) {
+        await updateBlog(editing, body);
+        toast({ title: "Blog updated successfully" });
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
     }
     setEditing(null);
     setIsAdding(false);
-    setForm(emptyBlog);
+    setForm(emptyForm);
+    setImageFile(null);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Delete this blog post?")) deleteBlog(id);
+  const handleDelete = async (id: string | number) => {
+    if (!window.confirm("Delete this blog post?")) return;
+    try {
+      await deleteBlog(id);
+      toast({ title: "Blog deleted" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
   };
 
-  const startAdd = () => { setIsAdding(true); setEditing("new"); setForm(emptyBlog); };
-  const cancel = () => { setEditing(null); setIsAdding(false); setForm(emptyBlog); };
+  const startAdd = () => { setIsAdding(true); setEditing("new"); setForm(emptyForm); setImageFile(null); };
+  const cancel = () => { setEditing(null); setIsAdding(false); setForm(emptyForm); setImageFile(null); };
 
   const addTag = () => {
     if (tagInput.trim()) {
@@ -54,6 +79,10 @@ const AdminBlogs = () => {
       setTagInput("");
     }
   };
+
+  const getImage = (b: any) => b.image_url || b.image || "";
+  const getDate = (b: any) => b.date || b.created_at || "";
+  const getReadTime = (b: any) => b.read_time || b.readTime || "";
 
   return (
     <div>
@@ -79,13 +108,20 @@ const AdminBlogs = () => {
               <button onClick={cancel}><X className="w-5 h-5 text-muted-foreground hover:text-foreground" /></button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Image upload at top */}
+              <ImageUploadField
+                imageUrl={form.image_url}
+                onImageUrlChange={(url) => setForm((f) => ({ ...f, image_url: url }))}
+                onFileSelect={setImageFile}
+                selectedFile={imageFile}
+              />
               <div className="md:col-span-2">
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Title</label>
                 <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className="bg-secondary/50 font-body" />
               </div>
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Category</label>
-                <Input value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} placeholder="e.g. Rituals, Vastu, Guides" className="bg-secondary/50 font-body" />
+                <Input value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} className="bg-secondary/50 font-body" />
               </div>
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Author</label>
@@ -97,22 +133,15 @@ const AdminBlogs = () => {
               </div>
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Read Time</label>
-                <Input value={form.readTime} onChange={(e) => setForm((f) => ({ ...f, readTime: e.target.value }))} placeholder="e.g. 5 min read" className="bg-secondary/50 font-body" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="font-body text-sm font-medium text-foreground mb-1 block">Image URL</label>
-                <Input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://..." className="bg-secondary/50 font-body" />
+                <Input value={form.read_time} onChange={(e) => setForm((f) => ({ ...f, read_time: e.target.value }))} className="bg-secondary/50 font-body" />
               </div>
               <div className="md:col-span-2">
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Excerpt</label>
                 <Textarea value={form.excerpt} onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))} rows={2} className="bg-secondary/50 font-body" />
               </div>
               <div className="md:col-span-2">
-                <label className="font-body text-sm font-medium text-foreground mb-1 block">Full Content <span className="text-muted-foreground">({form.content.length}/500 min)</span></label>
-                <Textarea value={form.content} onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))} rows={6} className={`bg-secondary/50 font-body ${form.content.length > 0 && form.content.length < 500 ? "border-destructive" : ""}`} placeholder="Use double line breaks for paragraphs... (minimum 500 characters)" />
-                {form.content.length > 0 && form.content.length < 500 && (
-                  <p className="font-body text-xs text-destructive mt-1">{500 - form.content.length} more characters needed</p>
-                )}
+                <label className="font-body text-sm font-medium text-foreground mb-1 block">Full Content</label>
+                <Textarea value={form.full_content} onChange={(e) => setForm((f) => ({ ...f, full_content: e.target.value }))} rows={6} className="bg-secondary/50 font-body" placeholder="Use double line breaks for paragraphs..." />
               </div>
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Tags</label>
@@ -141,23 +170,25 @@ const AdminBlogs = () => {
       </AnimatePresence>
 
       <div className="space-y-3">
-        {blogs.map((blog, i) => (
+        {blogs.map((blog: any, i: number) => (
           <motion.div
-            key={blog.id}
+            key={String(blog.id)}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.04 }}
             className="flex items-center gap-4 p-4 bg-card rounded-xl shadow-card border border-border hover:border-primary/20 transition-colors"
           >
-            <img src={blog.image} alt={blog.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+            <img src={getImage(blog)} alt={blog.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <h4 className="font-display text-sm font-semibold text-foreground truncate">{blog.title}</h4>
               <div className="flex items-center gap-3 mt-1">
                 <span className="font-body text-xs text-muted-foreground">{blog.category}</span>
-                <span className="flex items-center gap-1 text-muted-foreground">
-                  <Calendar className="w-3 h-3" />
-                  <span className="font-body text-xs">{new Date(blog.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                </span>
+                {getDate(blog) && (
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <Calendar className="w-3 h-3" />
+                    <span className="font-body text-xs">{new Date(getDate(blog)).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                  </span>
+                )}
                 <span className="font-body text-xs text-muted-foreground">{blog.author}</span>
               </div>
             </div>

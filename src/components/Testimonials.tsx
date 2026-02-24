@@ -3,7 +3,7 @@ import { Star, Quote } from "lucide-react";
 import { useAdmin } from "@/context/AdminContext";
 
 const Testimonials = () => {
-  const { testimonials } = useAdmin();
+  const { testimonials = [] } = useAdmin();
 
   return (
     <section id="testimonials" className="py-20 bg-gradient-hero relative overflow-hidden">
@@ -25,7 +25,7 @@ const Testimonials = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {testimonials.slice(0, 6).map((t, i) => (
+          {(testimonials || []).slice(0, 6).map((t, i) => (
             <motion.div
               key={t.id}
               initial={{ opacity: 0, y: 40 }}

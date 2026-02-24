@@ -21,6 +21,8 @@ export interface Pooja {
   reviews: number;
   priestName: string;
   priestExperience: string;
+  pujariId?: string;
+  locations: string[];
 }
 
 export const poojaImageMap: Record<string, string> = {
@@ -60,6 +62,7 @@ export const poojasData: Pooja[] = [
     reviews: 187,
     priestName: "Pandit Raghunath Sharma",
     priestExperience: "25+ years",
+    locations: ["New Delhi", "Mumbai", "Bangalore"],
   },
   {
     id: "pratyangira-devi-homam",
@@ -76,6 +79,7 @@ export const poojasData: Pooja[] = [
     reviews: 143,
     priestName: "Pandit Vishwanath Dikshit",
     priestExperience: "30+ years",
+    locations: ["Chennai", "Hyderabad", "Bangalore"],
   },
   {
     id: "shani-shanti-homam",
@@ -92,6 +96,7 @@ export const poojasData: Pooja[] = [
     reviews: 210,
     priestName: "Pandit Keshav Joshi",
     priestExperience: "20+ years",
+    locations: ["Mumbai", "Pune", "Ahmedabad"],
   },
   {
     id: "vastu-shanti-pooja",
@@ -108,6 +113,7 @@ export const poojasData: Pooja[] = [
     reviews: 178,
     priestName: "Pandit Suresh Shastri",
     priestExperience: "22+ years",
+    locations: ["New Delhi", "Jaipur", "Lucknow"],
   },
   {
     id: "ganesh-chaturthi-pooja",
@@ -124,6 +130,7 @@ export const poojasData: Pooja[] = [
     reviews: 312,
     priestName: "Pandit Ganesh Bhatt",
     priestExperience: "18+ years",
+    locations: ["Mumbai", "Pune", "Chennai", "Bangalore"],
   },
   {
     id: "shatru-samhara-pooja",
@@ -140,6 +147,7 @@ export const poojasData: Pooja[] = [
     reviews: 98,
     priestName: "Pandit Dharmanand Tripathi",
     priestExperience: "15+ years",
+    locations: ["Kolkata", "Bhubaneswar", "Patna"],
   },
   {
     id: "satyanarayan-pooja",
@@ -156,5 +164,6 @@ export const poojasData: Pooja[] = [
     reviews: 425,
     priestName: "Pandit Narayana Rao",
     priestExperience: "28+ years",
+    locations: ["New Delhi", "Mumbai", "Hyderabad", "Chennai", "Bangalore"],
   },
 ];

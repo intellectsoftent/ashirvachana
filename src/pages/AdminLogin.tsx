@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { Lock, Shield, Sparkles } from "lucide-react";
+import { Lock, Shield, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAdmin } from "@/context/AdminContext";
@@ -10,19 +10,22 @@ import logoIcon from "@/assets/logo-icon.jpeg";
 const AdminLogin = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const { login, isAdmin } = useAdmin();
   const navigate = useNavigate();
 
-  // Use useEffect for navigation to avoid calling navigate during render
   React.useEffect(() => {
     if (isAdmin) {
       navigate("/admin/dashboard");
     }
   }, [isAdmin, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(password)) {
+    setSubmitting(true);
+    const success = await login(password);
+    setSubmitting(false);
+    if (success) {
       navigate("/admin/dashboard");
     } else {
       setError("Invalid password. Please try again.");
@@ -83,8 +86,13 @@ const AdminLogin = () => {
             )}
           </div>
 
-          <Button type="submit" className="w-full h-12 bg-gradient-gold text-primary-foreground font-body font-semibold glow-saffron">
-            <Sparkles className="w-5 h-5 mr-2" /> Access Admin Panel
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="w-full h-12 bg-gradient-gold text-primary-foreground font-body font-semibold glow-saffron"
+          >
+            {submitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
+            {submitting ? "Verifying..." : "Access Admin Panel"}
           </Button>
         </form>
 

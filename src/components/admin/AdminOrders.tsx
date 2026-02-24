@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Package, Eye, UserCheck, IndianRupee, AlertCircle } from "lucide-react";
+import { Package, Eye, UserCheck, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useOrders, Order } from "@/context/OrderContext";
@@ -8,23 +8,43 @@ import { useOrders, Order } from "@/context/OrderContext";
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   confirmed: "bg-blue-100 text-blue-800",
+  processing: "bg-purple-100 text-purple-800",
   completed: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800",
+  refunded: "bg-gray-100 text-gray-800",
 };
 
 const AdminOrders = () => {
-  const { orders, updateOrder } = useOrders();
+  const { orders, loading, refreshOrders, updateOrderStatus } = useOrders();
   const [viewing, setViewing] = useState<Order | null>(null);
   const [panditInput, setPanditInput] = useState("");
 
-  const assignPandit = (orderId: string) => {
+  useEffect(() => {
+    refreshOrders();
+  }, [refreshOrders]);
+
+  const assignPandit = async (orderId: string | number) => {
     if (panditInput.trim()) {
-      updateOrder(orderId, { assignedPandit: panditInput.trim(), status: "confirmed" });
+      await updateOrderStatus(orderId, { priest_name: panditInput.trim(), status: "confirmed" });
       setPanditInput("");
     }
   };
 
-  const pendingPayments = orders.filter((o) => (o.balanceDue ?? 0) > 0 && o.status !== "cancelled");
+  const pendingPayments = orders.filter((o) => {
+    const balance = (o.balanceDue ?? o.balance_due ?? 0);
+    return balance > 0 && o.status !== "cancelled";
+  });
+
+  const getTotal = (o: Order) => o.totalWithGST ?? o.total_amount ?? 0;
+  const getAdvance = (o: Order) => o.advancePaid ?? o.advance_paid ?? getTotal(o);
+  const getBalance = (o: Order) => o.balanceDue ?? o.balance_due ?? 0;
+  const getName = (o: Order) => o.customerName ?? o.customer_name ?? "";
+  const getPhone = (o: Order) => o.customerPhone ?? o.customer_phone ?? "";
+  const getEmail = (o: Order) => o.customerEmail ?? o.customer_email ?? "";
+  const getLocation = (o: Order) => o.location ?? o.city ?? "";
+  const getDate = (o: Order) => o.createdAt ?? o.created_at ?? "";
+  const getPandit = (o: Order) => o.assignedPandit ?? o.priest_name ?? "";
+  const getPaymentType = (o: Order) => o.paymentType ?? o.payment_status ?? "full";
 
   return (
     <div>
@@ -33,44 +53,43 @@ const AdminOrders = () => {
         <span className="font-body text-sm text-muted-foreground">{orders.length} total orders</span>
       </div>
 
-      {/* Payment Summary Cards */}
       {orders.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="bg-card rounded-xl shadow-card border border-border p-4">
             <p className="font-body text-xs text-muted-foreground">Total Revenue</p>
             <p className="font-display text-2xl font-bold text-foreground mt-1">
-              ₹{orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + o.totalWithGST, 0).toLocaleString()}
+              ₹{orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + getTotal(o), 0).toLocaleString()}
             </p>
           </div>
           <div className="bg-card rounded-xl shadow-card border border-border p-4">
             <p className="font-body text-xs text-muted-foreground">Advance Collected</p>
             <p className="font-display text-2xl font-bold text-primary mt-1">
-              ₹{orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + (o.advancePaid ?? o.totalWithGST), 0).toLocaleString()}
+              ₹{orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + getAdvance(o), 0).toLocaleString()}
             </p>
           </div>
           <div className="bg-card rounded-xl shadow-card border border-border p-4">
             <p className="font-body text-xs text-muted-foreground">Balance Pending</p>
             <p className="font-display text-2xl font-bold text-destructive mt-1">
-              ₹{pendingPayments.reduce((s, o) => s + (o.balanceDue ?? 0), 0).toLocaleString()}
+              ₹{pendingPayments.reduce((s, o) => s + getBalance(o), 0).toLocaleString()}
             </p>
-            {pendingPayments.length > 0 && (
-              <p className="font-body text-xs text-muted-foreground mt-1">{pendingPayments.length} orders with balance due</p>
-            )}
           </div>
         </div>
       )}
 
-      {orders.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-20">
+          <p className="font-body text-muted-foreground">Loading orders...</p>
+        </div>
+      ) : orders.length === 0 ? (
         <div className="text-center py-20">
           <Package className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
           <p className="font-display text-xl text-muted-foreground">No orders yet</p>
-          <p className="font-body text-sm text-muted-foreground mt-1">Orders will appear here after customers purchase</p>
         </div>
       ) : (
         <div className="space-y-3">
           {orders.map((order, i) => (
             <motion.div
-              key={order.id}
+              key={String(order.id)}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
@@ -79,31 +98,33 @@ const AdminOrders = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <h4 className="font-display text-sm font-semibold text-foreground">#{order.id.slice(0, 8)}</h4>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-body font-medium ${statusColors[order.status]}`}>
+                    <h4 className="font-display text-sm font-semibold text-foreground">#{String(order.id).slice(0, 8)}</h4>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-body font-medium ${statusColors[order.status] || "bg-gray-100 text-gray-800"}`}>
                       {order.status}
                     </span>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-body font-medium ${
-                      (order.paymentType ?? "full") === "partial" ? "bg-orange-100 text-orange-800" : "bg-green-100 text-green-800"
+                      getPaymentType(order) === "partial" ? "bg-orange-100 text-orange-800" : "bg-green-100 text-green-800"
                     }`}>
-                      {(order.paymentType ?? "full") === "partial" ? "Partial Payment" : "Full Payment"}
+                      {getPaymentType(order) === "partial" ? "Partial Payment" : "Full Payment"}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 mt-1 flex-wrap">
-                    <span className="font-body text-xs text-muted-foreground">{order.customerName}</span>
-                    <span className="font-body text-xs text-muted-foreground">{order.location}</span>
-                    <span className="font-body text-xs font-medium text-primary">₹{order.totalWithGST.toLocaleString()}</span>
-                    {(order.balanceDue ?? 0) > 0 && (
+                    <span className="font-body text-xs text-muted-foreground">{getName(order)}</span>
+                    <span className="font-body text-xs text-muted-foreground">{getLocation(order)}</span>
+                    <span className="font-body text-xs font-medium text-primary">₹{getTotal(order).toLocaleString()}</span>
+                    {getBalance(order) > 0 && (
                       <span className="font-body text-xs font-medium text-destructive flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> Balance: ₹{order.balanceDue?.toLocaleString()}
+                        <AlertCircle className="w-3 h-3" /> Balance: ₹{getBalance(order).toLocaleString()}
                       </span>
                     )}
-                    <span className="font-body text-xs text-muted-foreground">
-                      {new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                    </span>
+                    {getDate(order) && (
+                      <span className="font-body text-xs text-muted-foreground">
+                        {new Date(getDate(order)).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                      </span>
+                    )}
                   </div>
-                  {order.assignedPandit && (
-                    <p className="font-body text-xs text-green-600 mt-1">Pandit: {order.assignedPandit}</p>
+                  {getPandit(order) && (
+                    <p className="font-body text-xs text-green-600 mt-1">Pandit: {getPandit(order)}</p>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -127,58 +148,43 @@ const AdminOrders = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <p className="font-body text-xs text-muted-foreground mb-1">Customer Details</p>
-                      <p className="font-body text-sm text-foreground">{order.customerName}</p>
-                      <p className="font-body text-sm text-muted-foreground">{order.customerPhone}</p>
-                      <p className="font-body text-sm text-muted-foreground">{order.customerEmail}</p>
-                      <p className="font-body text-sm text-muted-foreground">{order.location}</p>
+                      <p className="font-body text-sm text-foreground">{getName(order)}</p>
+                      <p className="font-body text-sm text-muted-foreground">{getPhone(order)}</p>
+                      <p className="font-body text-sm text-muted-foreground">{getEmail(order)}</p>
+                      <p className="font-body text-sm text-muted-foreground">{getLocation(order)}</p>
                     </div>
                     <div>
                       <p className="font-body text-xs text-muted-foreground mb-1">Items</p>
-                      {order.items.map((item) => (
-                        <div key={item.id} className="flex items-center gap-2 mb-1">
-                          <img src={item.image} alt={item.name} className="w-8 h-8 rounded object-cover" />
-                          <span className="font-body text-sm text-foreground">{item.name} x{item.quantity}</span>
-                          <span className="font-body text-xs text-primary ml-auto">₹{(item.price * item.quantity).toLocaleString()}</span>
+                      {(order.items || []).map((item: any, idx: number) => (
+                        <div key={idx} className="flex items-center gap-2 mb-1">
+                          {item.image && <img src={item.image || item.image_url} alt={item.name} className="w-8 h-8 rounded object-cover" />}
+                          <span className="font-body text-sm text-foreground">{item.name} x{item.quantity || 1}</span>
+                          <span className="font-body text-xs text-primary ml-auto">₹{((item.price || 0) * (item.quantity || 1)).toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
                     <div>
-                      <p className="font-body text-xs text-muted-foreground mb-1">Payment Breakdown</p>
+                      <p className="font-body text-xs text-muted-foreground mb-1">Payment</p>
                       <div className="bg-secondary/50 rounded-lg p-3 space-y-2">
                         <div className="flex justify-between font-body text-sm">
-                          <span className="text-muted-foreground">Total (incl. GST)</span>
-                          <span className="font-medium text-foreground">₹{order.totalWithGST.toLocaleString()}</span>
+                          <span className="text-muted-foreground">Total</span>
+                          <span className="font-medium text-foreground">₹{getTotal(order).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between font-body text-sm">
                           <span className="text-muted-foreground">Advance Paid</span>
-                          <span className="font-medium text-primary">₹{(order.advancePaid ?? order.totalWithGST).toLocaleString()}</span>
+                          <span className="font-medium text-primary">₹{getAdvance(order).toLocaleString()}</span>
                         </div>
-                        {(order.balanceDue ?? 0) > 0 && (
+                        {getBalance(order) > 0 && (
                           <div className="flex justify-between font-body text-sm border-t border-border pt-2">
                             <span className="text-destructive font-medium">Balance Due</span>
-                            <span className="font-bold text-destructive">₹{order.balanceDue?.toLocaleString()}</span>
+                            <span className="font-bold text-destructive">₹{getBalance(order).toLocaleString()}</span>
                           </div>
                         )}
-                        <p className="font-body text-xs text-muted-foreground pt-1">
-                          {(order.paymentType ?? "full") === "partial"
-                            ? "⚠️ Partial payment — collect balance before pooja"
-                            : "✅ Full payment received"}
-                        </p>
                       </div>
-
-                      {/* Cancellation policy note for pooja orders */}
-                      {order.items.some(i => i.type === "pooja") && order.status !== "cancelled" && order.status !== "completed" && (
-                        <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-2">
-                          <p className="font-body text-xs text-orange-800 font-medium mb-1">Cancellation Policy</p>
-                          <p className="font-body text-[11px] text-orange-700">2+ days: Full refund</p>
-                          <p className="font-body text-[11px] text-orange-700">Within 48hrs: 50% refund</p>
-                          <p className="font-body text-[11px] text-orange-700">Event day: No refund</p>
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  {!order.assignedPandit && order.items.some(i => i.type === "pooja") && (
+                  {!getPandit(order) && (
                     <div className="mt-4 flex gap-2">
                       <Input
                         value={panditInput}
@@ -194,17 +200,17 @@ const AdminOrders = () => {
 
                   <div className="flex gap-2 mt-4">
                     {order.status === "pending" && (
-                      <Button size="sm" variant="outline" onClick={() => updateOrder(order.id, { status: "confirmed" })} className="font-body">
+                      <Button size="sm" variant="outline" onClick={() => updateOrderStatus(order.id, { status: "confirmed" })} className="font-body">
                         Confirm
                       </Button>
                     )}
                     {order.status === "confirmed" && (
-                      <Button size="sm" variant="outline" onClick={() => updateOrder(order.id, { status: "completed" })} className="font-body">
+                      <Button size="sm" variant="outline" onClick={() => updateOrderStatus(order.id, { status: "completed" })} className="font-body">
                         Mark Completed
                       </Button>
                     )}
                     {order.status !== "cancelled" && order.status !== "completed" && (
-                      <Button size="sm" variant="outline" onClick={() => updateOrder(order.id, { status: "cancelled" })} className="font-body text-destructive">
+                      <Button size="sm" variant="outline" onClick={() => updateOrderStatus(order.id, { status: "cancelled" })} className="font-body text-destructive">
                         Cancel
                       </Button>
                     )}

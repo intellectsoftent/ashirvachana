@@ -4,57 +4,79 @@ import { Plus, Pencil, Trash2, X, Save, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAdmin } from "@/context/AdminContext";
-import type { Pooja } from "@/data/poojas";
+import { useToast } from "@/hooks/use-toast";
+import { toArray } from "@/lib/normalize";
+import { buildFormData } from "@/lib/formdata";
+import ImageUploadField from "./ImageUploadField";
 
-const emptyPooja: Omit<Pooja, "id"> = {
-  title: "", category: "Protection", price: 0, originalPrice: 0, image: "",
-  duration: "", description: "", benefits: [], includes: [],
-  rating: 5, reviews: 0, priestName: "", priestExperience: "",
+const emptyForm = {
+  title: "", category: "Protection", price: 0, original_price: 0, image_url: "",
+  duration: "", description: "", benefits: [] as string[], includes: [] as string[],
+  is_featured: false, badge: "", advance_percent: 30, location_ids: [] as number[],
 };
 
 const AdminPoojas = () => {
   const { poojas, addPooja, updatePooja, deletePooja } = useAdmin();
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [form, setForm] = useState<Omit<Pooja, "id">>(emptyPooja);
+  const [form, setForm] = useState(emptyForm);
   const [benefitInput, setBenefitInput] = useState("");
   const [includeInput, setIncludeInput] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const { toast } = useToast();
 
-  const handleEdit = (pooja: Pooja) => {
+  const handleEdit = (pooja: any) => {
     setEditing(pooja.id);
-    setForm({ ...pooja });
+    setForm({
+      title: pooja.title || "",
+      category: pooja.category || "Protection",
+      price: pooja.price || 0,
+      original_price: pooja.original_price || pooja.originalPrice || 0,
+      image_url: pooja.image_url || pooja.image || "",
+      duration: pooja.duration || "",
+      description: pooja.description || "",
+      benefits: toArray(pooja.benefits),
+      includes: toArray(pooja.includes),
+      is_featured: pooja.is_featured || false,
+      badge: pooja.badge || "",
+      advance_percent: pooja.advance_percent || 30,
+      location_ids: pooja.location_ids || [],
+    });
+    setImageFile(null);
     setIsAdding(false);
   };
 
-  const handleSave = () => {
-    if (isAdding) {
-      const id = form.title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-      addPooja({ ...form, id } as Pooja);
-    } else if (editing) {
-      updatePooja(editing, form);
+  const handleSave = async () => {
+    try {
+      const body = imageFile ? buildFormData(form, imageFile) : form;
+      if (isAdding) {
+        await addPooja(body);
+        toast({ title: "Pooja added successfully" });
+      } else if (editing) {
+        await updatePooja(editing, body);
+        toast({ title: "Pooja updated successfully" });
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
     }
     setEditing(null);
     setIsAdding(false);
-    setForm(emptyPooja);
+    setForm(emptyForm);
+    setImageFile(null);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this pooja?")) {
-      deletePooja(id);
+  const handleDelete = async (id: string | number) => {
+    if (!window.confirm("Delete this pooja?")) return;
+    try {
+      await deletePooja(id);
+      toast({ title: "Pooja deleted" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
     }
   };
 
-  const startAdd = () => {
-    setIsAdding(true);
-    setEditing("new");
-    setForm(emptyPooja);
-  };
-
-  const cancel = () => {
-    setEditing(null);
-    setIsAdding(false);
-    setForm(emptyPooja);
-  };
+  const startAdd = () => { setIsAdding(true); setEditing("new"); setForm(emptyForm); setImageFile(null); };
+  const cancel = () => { setEditing(null); setIsAdding(false); setForm(emptyForm); setImageFile(null); };
 
   const addBenefit = () => {
     if (benefitInput.trim()) {
@@ -70,6 +92,10 @@ const AdminPoojas = () => {
     }
   };
 
+  const getImage = (p: any) => p.image_url || p.image || "";
+  const getTitle = (p: any) => p.title || "";
+  const getPrice = (p: any) => p.price || 0;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -81,7 +107,6 @@ const AdminPoojas = () => {
         </motion.div>
       </div>
 
-      {/* Form */}
       <AnimatePresence>
         {editing && (
           <motion.div
@@ -95,6 +120,13 @@ const AdminPoojas = () => {
               <button onClick={cancel}><X className="w-5 h-5 text-muted-foreground hover:text-foreground" /></button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Image upload at top */}
+              <ImageUploadField
+                imageUrl={form.image_url}
+                onImageUrlChange={(url) => setForm((f) => ({ ...f, image_url: url }))}
+                onFileSelect={setImageFile}
+                selectedFile={imageFile}
+              />
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Title</label>
                 <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className="bg-secondary/50 font-body" />
@@ -109,24 +141,23 @@ const AdminPoojas = () => {
               </div>
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Original Price (₹)</label>
-                <Input type="number" value={form.originalPrice} onChange={(e) => setForm((f) => ({ ...f, originalPrice: Number(e.target.value) }))} className="bg-secondary/50 font-body" />
+                <Input type="number" value={form.original_price} onChange={(e) => setForm((f) => ({ ...f, original_price: Number(e.target.value) }))} className="bg-secondary/50 font-body" />
               </div>
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Duration</label>
                 <Input value={form.duration} onChange={(e) => setForm((f) => ({ ...f, duration: e.target.value }))} placeholder="e.g. 3-4 Hours" className="bg-secondary/50 font-body" />
               </div>
               <div>
-                <label className="font-body text-sm font-medium text-foreground mb-1 block">Image URL</label>
-                <Input value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://..." className="bg-secondary/50 font-body" />
+                <label className="font-body text-sm font-medium text-foreground mb-1 block">Badge</label>
+                <Input value={form.badge} onChange={(e) => setForm((f) => ({ ...f, badge: e.target.value }))} placeholder="e.g. Prosperity" className="bg-secondary/50 font-body" />
+              </div>
+              <div>
+                <label className="font-body text-sm font-medium text-foreground mb-1 block">Advance %</label>
+                <Input type="number" value={form.advance_percent} onChange={(e) => setForm((f) => ({ ...f, advance_percent: Number(e.target.value) }))} className="bg-secondary/50 font-body" />
               </div>
               <div className="md:col-span-2">
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Description</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  rows={3}
-                  className="w-full rounded-lg bg-secondary/50 border border-border p-3 font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                />
+                <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={3} className="w-full rounded-lg bg-secondary/50 border border-border p-3 font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
               </div>
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1 block">Benefits</label>
@@ -158,6 +189,10 @@ const AdminPoojas = () => {
                   ))}
                 </div>
               </div>
+              <div className="flex items-center gap-3">
+                <label className="font-body text-sm font-medium text-foreground">Featured</label>
+                <input type="checkbox" checked={form.is_featured} onChange={(e) => setForm((f) => ({ ...f, is_featured: e.target.checked }))} className="rounded" />
+              </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={cancel} className="font-body">Cancel</Button>
@@ -169,23 +204,22 @@ const AdminPoojas = () => {
         )}
       </AnimatePresence>
 
-      {/* List */}
       <div className="space-y-3">
-        {poojas.map((pooja, i) => (
+        {poojas.map((pooja: any, i: number) => (
           <motion.div
-            key={pooja.id}
+            key={String(pooja.id)}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.04 }}
             className="flex items-center gap-4 p-4 bg-card rounded-xl shadow-card border border-border hover:border-primary/20 transition-colors"
           >
-            <img src={pooja.image} alt={pooja.title} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+            <img src={getImage(pooja)} alt={getTitle(pooja)} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <h4 className="font-display text-sm font-semibold text-foreground truncate">{pooja.title}</h4>
-              <div className="flex items-center gap-3 mt-1">
+              <h4 className="font-display text-sm font-semibold text-foreground truncate">{getTitle(pooja)}</h4>
+              <div className="flex items-center gap-3 mt-1 flex-wrap">
                 <span className="font-body text-xs text-muted-foreground">{pooja.category}</span>
-                <span className="font-body text-xs font-medium text-primary">₹{pooja.price.toLocaleString()}</span>
-                <span className="flex items-center gap-1"><Star className="w-3 h-3 fill-gold text-gold" /><span className="font-body text-xs">{pooja.rating}</span></span>
+                <span className="font-body text-xs font-medium text-primary">₹{getPrice(pooja).toLocaleString()}</span>
+                {pooja.rating && <span className="flex items-center gap-1"><Star className="w-3 h-3 fill-gold text-gold" /><span className="font-body text-xs">{pooja.rating}</span></span>}
               </div>
             </div>
             <div className="flex gap-2">

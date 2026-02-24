@@ -14,10 +14,10 @@ const Blogs = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const { blogs = [] } = useAdmin();
 
-  const filtered = (blogs ?? []).filter((b) => {
+  const filtered = (blogs ?? []).filter((b: any) => {
     const matchCat = selectedCategory === "All" || b.category === selectedCategory;
-    const matchSearch = b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = (b.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (b.excerpt || "").toLowerCase().includes(searchQuery.toLowerCase());
     return matchCat && matchSearch;
   });
 
@@ -96,7 +96,7 @@ const Blogs = () => {
           <AnimatePresence mode="popLayout">
             {filtered.map((blog, i) => (
               <motion.div
-                key={blog.id}
+                key={String(blog.id)}
                 layout
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -108,7 +108,7 @@ const Blogs = () => {
                   <div className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-500 border border-border hover:border-primary/30 h-full flex flex-col">
                     <div className="relative overflow-hidden h-52">
                       <motion.img
-                        src={blog.image}
+                        src={blog.image_url || blog.image || ""}
                         alt={blog.title}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
@@ -123,11 +123,11 @@ const Blogs = () => {
                       <div className="flex items-center gap-3 text-muted-foreground mb-3">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5" />
-                          <span className="font-body text-xs">{new Date(blog.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                          <span className="font-body text-xs">{new Date(blog.date || blog.created_at || "").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
-                          <span className="font-body text-xs">{blog.readTime}</span>
+                          <span className="font-body text-xs">{blog.read_time || blog.readTime}</span>
                         </div>
                       </div>
                       <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-primary transition-colors leading-snug mb-2">

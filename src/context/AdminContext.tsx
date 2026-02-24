@@ -1,134 +1,201 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Pooja, poojasData, poojaIdImageMap } from "@/data/poojas";
-import { Idol, idolsData } from "@/data/idols";
-import { Testimonial, testimonialsData } from "@/data/testimonials";
-import { Blog, blogsData } from "@/data/blogs";
-import { idolImageMap } from "@/utils/idolImages";
-
-// Blog image map for re-mapping
-import blogGaneshPuja from "@/assets/blog-ganesh-puja.jpg";
-import blogVastuHome from "@/assets/blog-vastu-home.jpg";
-import blogNavagraha from "@/assets/blog-navagraha.jpg";
-import blogChoosingIdol from "@/assets/blog-choosing-idol.jpg";
-
-const blogImageMap: Record<string, string> = {
-  "importance-of-ganesh-puja": blogGaneshPuja,
-  "vastu-tips-home": blogVastuHome,
-  "navagraha-puja-benefits": blogNavagraha,
-  "choosing-right-idol": blogChoosingIdol,
-};
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { adminAuthApi, getAdminToken, setAdminToken, clearAdminToken, poojasApi, idolsApi, blogsApi, testimonialsApi } from "@/lib/api";
+import { normalizeList } from "@/lib/normalize";
 
 interface AdminContextType {
   isAdmin: boolean;
-  login: (password: string) => boolean;
+  adminLoading: boolean;
+  login: (password: string) => Promise<boolean>;
   logout: () => void;
-  poojas: Pooja[];
-  idols: (Idol & { image: string })[];
-  testimonials: Testimonial[];
-  blogs: Blog[];
-  addPooja: (pooja: Pooja) => void;
-  updatePooja: (id: string, pooja: Partial<Pooja>) => void;
-  deletePooja: (id: string) => void;
-  addIdol: (idol: Idol & { image: string }) => void;
-  updateIdol: (id: string, idol: Partial<Idol>) => void;
-  deleteIdol: (id: string) => void;
-  addTestimonial: (t: Testimonial) => void;
-  updateTestimonial: (id: string, t: Partial<Testimonial>) => void;
-  deleteTestimonial: (id: string) => void;
-  addBlog: (b: Blog) => void;
-  updateBlog: (id: string, b: Partial<Blog>) => void;
-  deleteBlog: (id: string) => void;
+  // Data
+  poojas: any[];
+  idols: any[];
+  testimonials: any[];
+  blogs: any[];
+  dataLoading: boolean;
+  // CRUD
+  refreshPoojas: () => Promise<void>;
+  addPooja: (body: Record<string, any> | FormData) => Promise<void>;
+  updatePooja: (id: string | number, body: Record<string, any> | FormData) => Promise<void>;
+  deletePooja: (id: string | number) => Promise<void>;
+  refreshIdols: () => Promise<void>;
+  addIdol: (body: Record<string, any> | FormData) => Promise<void>;
+  updateIdol: (id: string | number, body: Record<string, any> | FormData) => Promise<void>;
+  deleteIdol: (id: string | number) => Promise<void>;
+  refreshTestimonials: () => Promise<void>;
+  addTestimonial: (body: Record<string, any>) => Promise<void>;
+  updateTestimonial: (id: string | number, body: Record<string, any>) => Promise<void>;
+  deleteTestimonial: (id: string | number) => Promise<void>;
+  refreshBlogs: () => Promise<void>;
+  addBlog: (body: Record<string, any> | FormData) => Promise<void>;
+  updateBlog: (id: string | number, body: Record<string, any> | FormData) => Promise<void>;
+  deleteBlog: (id: string | number) => Promise<void>;
 }
 
 const AdminContext = createContext<AdminContextType>({} as AdminContextType);
 
-const ADMIN_PASSWORD = "divine@admin2026";
-
 export const AdminProvider = ({ children }: { children: ReactNode }) => {
-  const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem("admin_auth") === "true");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  // Initialize data from localStorage or defaults, always re-map images to current build URLs
-  const [poojas, setPoojas] = useState<Pooja[]>(() => {
-    const stored = localStorage.getItem("admin_poojas");
-    if (stored) {
-      const parsed: Pooja[] = JSON.parse(stored);
-      return parsed.map((p) => ({ ...p, image: poojaIdImageMap[p.id] || p.image }));
+  const [poojas, setPoojas] = useState<any[]>([]);
+  const [idols, setIdols] = useState<any[]>([]);
+  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [blogs, setBlogs] = useState<any[]>([]);
+
+  // On mount, verify existing admin token
+  useEffect(() => {
+    const token = getAdminToken();
+    if (token) {
+      adminAuthApi
+        .verify()
+        .then(() => setIsAdmin(true))
+        .catch(() => clearAdminToken())
+        .finally(() => setAdminLoading(false));
+    } else {
+      setAdminLoading(false);
     }
-    return poojasData;
-  });
+  }, []);
 
-  const [idols, setIdols] = useState<(Idol & { image: string })[]>(() => {
-    const stored = localStorage.getItem("admin_idols");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return parsed.map((i: Idol & { image: string }) => ({ ...i, image: idolImageMap[i.id] || i.image }));
+  // Fetch public data on mount
+  const fetchPublicData = useCallback(async () => {
+    setDataLoading(true);
+    try {
+      const [p, i, t, b] = await Promise.all([
+        poojasApi.getAll().catch(() => []),
+        idolsApi.getAll().catch(() => []),
+        testimonialsApi.getAll().catch(() => []),
+        blogsApi.getAll().catch(() => []),
+      ]);
+      setPoojas(normalizeList(Array.isArray(p) ? p : (p as any)?.poojas ?? (p as any)?.data ?? []));
+      setIdols(normalizeList(Array.isArray(i) ? i : (i as any)?.idols ?? (i as any)?.data ?? []));
+      setTestimonials(Array.isArray(t) ? t : (t as any)?.testimonials ?? (t as any)?.data ?? []);
+      setBlogs(normalizeList(Array.isArray(b) ? b : (b as any)?.blogs ?? (b as any)?.data ?? []));
+    } catch {
+      // silent
+    } finally {
+      setDataLoading(false);
     }
-    return idolsData.map((idol) => ({ ...idol, image: idolImageMap[idol.id] || "" }));
-  });
+  }, []);
 
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(() => {
-    const stored = localStorage.getItem("admin_testimonials");
-    return stored ? JSON.parse(stored) : testimonialsData;
-  });
+  useEffect(() => {
+    fetchPublicData();
+  }, [fetchPublicData]);
 
-  const [blogs, setBlogs] = useState<Blog[]>(() => {
-    const stored = localStorage.getItem("admin_blogs");
-    if (stored) {
-      const parsed: Blog[] = JSON.parse(stored);
-      return parsed.map((b) => ({ ...b, image: blogImageMap[b.id] || b.image }));
-    }
-    return blogsData;
-  });
-
-  // Persist to localStorage
-  useEffect(() => { localStorage.setItem("admin_poojas", JSON.stringify(poojas)); }, [poojas]);
-  useEffect(() => { localStorage.setItem("admin_idols", JSON.stringify(idols)); }, [idols]);
-  useEffect(() => { localStorage.setItem("admin_testimonials", JSON.stringify(testimonials)); }, [testimonials]);
-  useEffect(() => { localStorage.setItem("admin_blogs", JSON.stringify(blogs)); }, [blogs]);
-
-  const login = (password: string) => {
-    if (password === ADMIN_PASSWORD) {
+  const login = async (password: string): Promise<boolean> => {
+    try {
+      const res = await adminAuthApi.login(password);
+      setAdminToken(res.token);
       setIsAdmin(true);
-      localStorage.setItem("admin_auth", "true");
       return true;
+    } catch {
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
     setIsAdmin(false);
-    localStorage.removeItem("admin_auth");
+    clearAdminToken();
   };
 
-  const addPooja = (pooja: Pooja) => setPoojas((prev) => [...prev, pooja]);
-  const updatePooja = (id: string, data: Partial<Pooja>) =>
-    setPoojas((prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)));
-  const deletePooja = (id: string) => setPoojas((prev) => prev.filter((p) => p.id !== id));
+  // ─── Poojas CRUD ──────────────────────────────────
+  const refreshPoojas = useCallback(async () => {
+    try {
+      const token = getAdminToken();
+      const data = token ? await poojasApi.adminGetAll() : await poojasApi.getAll();
+      setPoojas(normalizeList(Array.isArray(data) ? data : (data as any)?.poojas ?? (data as any)?.data ?? []));
+    } catch { /* silent */ }
+  }, []);
 
-  const addIdol = (idol: Idol & { image: string }) => setIdols((prev) => [...prev, idol]);
-  const updateIdol = (id: string, data: Partial<Idol>) =>
-    setIdols((prev) => prev.map((i) => (i.id === id ? { ...i, ...data } : i)));
-  const deleteIdol = (id: string) => setIdols((prev) => prev.filter((i) => i.id !== id));
+  const addPooja = async (body: Record<string, any> | FormData) => {
+    await poojasApi.adminCreate(body);
+    await refreshPoojas();
+  };
+  const updatePooja = async (id: string | number, body: Record<string, any> | FormData) => {
+    await poojasApi.adminUpdate(id, body);
+    await refreshPoojas();
+  };
+  const deletePooja = async (id: string | number) => {
+    await poojasApi.adminDelete(id);
+    await refreshPoojas();
+  };
 
-  const addTestimonial = (t: Testimonial) => setTestimonials((prev) => [...prev, t]);
-  const updateTestimonial = (id: string, data: Partial<Testimonial>) =>
-    setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, ...data } : t)));
-  const deleteTestimonial = (id: string) => setTestimonials((prev) => prev.filter((t) => t.id !== id));
+  // ─── Idols CRUD ───────────────────────────────────
+  const refreshIdols = useCallback(async () => {
+    try {
+      const token = getAdminToken();
+      const data = token ? await idolsApi.adminGetAll() : await idolsApi.getAll();
+      setIdols(normalizeList(Array.isArray(data) ? data : (data as any)?.idols ?? (data as any)?.data ?? []));
+    } catch { /* silent */ }
+  }, []);
 
-  const addBlog = (b: Blog) => setBlogs((prev) => [...prev, b]);
-  const updateBlog = (id: string, data: Partial<Blog>) =>
-    setBlogs((prev) => prev.map((b) => (b.id === id ? { ...b, ...data } : b)));
-  const deleteBlog = (id: string) => setBlogs((prev) => prev.filter((b) => b.id !== id));
+  const addIdol = async (body: Record<string, any> | FormData) => {
+    await idolsApi.adminCreate(body);
+    await refreshIdols();
+  };
+  const updateIdol = async (id: string | number, body: Record<string, any> | FormData) => {
+    await idolsApi.adminUpdate(id, body);
+    await refreshIdols();
+  };
+  const deleteIdol = async (id: string | number) => {
+    await idolsApi.adminDelete(id);
+    await refreshIdols();
+  };
+
+  // ─── Testimonials CRUD ────────────────────────────
+  const refreshTestimonials = useCallback(async () => {
+    try {
+      const token = getAdminToken();
+      const data = token ? await testimonialsApi.adminGetAll() : await testimonialsApi.getAll();
+      setTestimonials(Array.isArray(data) ? data : (data as any)?.testimonials ?? (data as any)?.data ?? []);
+    } catch { /* silent */ }
+  }, []);
+
+  const addTestimonial = async (body: Record<string, any>) => {
+    await testimonialsApi.adminCreate(body);
+    await refreshTestimonials();
+  };
+  const updateTestimonial = async (id: string | number, body: Record<string, any>) => {
+    await testimonialsApi.adminUpdate(id, body);
+    await refreshTestimonials();
+  };
+  const deleteTestimonial = async (id: string | number) => {
+    await testimonialsApi.adminDelete(id);
+    await refreshTestimonials();
+  };
+
+  // ─── Blogs CRUD ───────────────────────────────────
+  const refreshBlogs = useCallback(async () => {
+    try {
+      const token = getAdminToken();
+      const data = token ? await blogsApi.adminGetAll() : await blogsApi.getAll();
+      setBlogs(normalizeList(Array.isArray(data) ? data : (data as any)?.blogs ?? (data as any)?.data ?? []));
+    } catch { /* silent */ }
+  }, []);
+
+  const addBlog = async (body: Record<string, any> | FormData) => {
+    await blogsApi.adminCreate(body);
+    await refreshBlogs();
+  };
+  const updateBlog = async (id: string | number, body: Record<string, any> | FormData) => {
+    await blogsApi.adminUpdate(id, body);
+    await refreshBlogs();
+  };
+  const deleteBlog = async (id: string | number) => {
+    await blogsApi.adminDelete(id);
+    await refreshBlogs();
+  };
 
   return (
     <AdminContext.Provider
       value={{
-        isAdmin, login, logout,
-        poojas, idols, testimonials, blogs,
-        addPooja, updatePooja, deletePooja,
-        addIdol, updateIdol, deleteIdol,
-        addTestimonial, updateTestimonial, deleteTestimonial,
-        addBlog, updateBlog, deleteBlog,
+        isAdmin, adminLoading, login, logout,
+        poojas, idols, testimonials, blogs, dataLoading,
+        refreshPoojas, addPooja, updatePooja, deletePooja,
+        refreshIdols, addIdol, updateIdol, deleteIdol,
+        refreshTestimonials, addTestimonial, updateTestimonial, deleteTestimonial,
+        refreshBlogs, addBlog, updateBlog, deleteBlog,
       }}
     >
       {children}

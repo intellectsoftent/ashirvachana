@@ -4,45 +4,80 @@ import { Plus, Pencil, Trash2, X, Save, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAdmin } from "@/context/AdminContext";
-import type { Idol } from "@/data/idols";
+import { useToast } from "@/hooks/use-toast";
+import { toArray } from "@/lib/normalize";
+import { buildFormData } from "@/lib/formdata";
+import ImageUploadField from "./ImageUploadField";
 
-const emptyIdol = {
-  name: "", deity: "", price: 0, originalPrice: 0, image: "",
+const emptyForm = {
+  name: "", deity: "", price: 0, original_price: 0, image_url: "",
   material: "", height: "", weight: "", description: "",
-  features: [] as string[], rating: 5, reviews: 0, inStock: true,
+  features: [] as string[], in_stock: true, stock_quantity: 0,
+  is_featured: false, location_ids: [] as number[],
 };
 
 const AdminIdols = () => {
   const { idols, addIdol, updateIdol, deleteIdol } = useAdmin();
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [form, setForm] = useState(emptyIdol);
+  const [form, setForm] = useState(emptyForm);
   const [featureInput, setFeatureInput] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const { toast } = useToast();
 
-  const handleEdit = (idol: Idol & { image: string }) => {
+  const handleEdit = (idol: any) => {
     setEditing(idol.id);
-    setForm({ ...idol });
+    setForm({
+      name: idol.name || "",
+      deity: idol.deity || "",
+      price: idol.price || 0,
+      original_price: idol.original_price || idol.originalPrice || 0,
+      image_url: idol.image_url || idol.image || "",
+      material: idol.material || "",
+      height: idol.height || "",
+      weight: idol.weight || "",
+      description: idol.description || "",
+      features: toArray(idol.features),
+      in_stock: idol.in_stock ?? idol.inStock ?? true,
+      stock_quantity: idol.stock_quantity || 0,
+      is_featured: idol.is_featured || false,
+      location_ids: idol.location_ids || [],
+    });
+    setImageFile(null);
     setIsAdding(false);
   };
 
-  const handleSave = () => {
-    if (isAdding) {
-      const id = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-      addIdol({ ...form, id } as Idol & { image: string });
-    } else if (editing) {
-      updateIdol(editing, form);
+  const handleSave = async () => {
+    try {
+      const body = imageFile ? buildFormData(form, imageFile) : form;
+      if (isAdding) {
+        await addIdol(body);
+        toast({ title: "Idol added successfully" });
+      } else if (editing) {
+        await updateIdol(editing, body);
+        toast({ title: "Idol updated successfully" });
+      }
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
     }
     setEditing(null);
     setIsAdding(false);
-    setForm(emptyIdol);
+    setForm(emptyForm);
+    setImageFile(null);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Delete this idol?")) deleteIdol(id);
+  const handleDelete = async (id: string | number) => {
+    if (!window.confirm("Delete this idol?")) return;
+    try {
+      await deleteIdol(id);
+      toast({ title: "Idol deleted" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
   };
 
-  const startAdd = () => { setIsAdding(true); setEditing("new"); setForm(emptyIdol); };
-  const cancel = () => { setEditing(null); setIsAdding(false); setForm(emptyIdol); };
+  const startAdd = () => { setIsAdding(true); setEditing("new"); setForm(emptyForm); setImageFile(null); };
+  const cancel = () => { setEditing(null); setIsAdding(false); setForm(emptyForm); setImageFile(null); };
 
   const addFeature = () => {
     if (featureInput.trim()) {
@@ -50,6 +85,11 @@ const AdminIdols = () => {
       setFeatureInput("");
     }
   };
+
+  const getImage = (idol: any) => idol.image_url || idol.image || "";
+  const getName = (idol: any) => idol.name || "";
+  const getPrice = (idol: any) => idol.price || 0;
+  const isInStock = (idol: any) => idol.in_stock ?? idol.inStock ?? true;
 
   return (
     <div>
@@ -75,15 +115,21 @@ const AdminIdols = () => {
               <button onClick={cancel}><X className="w-5 h-5 text-muted-foreground hover:text-foreground" /></button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Image upload at top */}
+              <ImageUploadField
+                imageUrl={form.image_url}
+                onImageUrlChange={(url) => setForm((f) => ({ ...f, image_url: url }))}
+                onFileSelect={setImageFile}
+                selectedFile={imageFile}
+              />
               {[
                 { key: "name", label: "Name", type: "text" },
                 { key: "deity", label: "Deity", type: "text" },
                 { key: "price", label: "Price (₹)", type: "number" },
-                { key: "originalPrice", label: "Original Price (₹)", type: "number" },
+                { key: "original_price", label: "Original Price (₹)", type: "number" },
                 { key: "material", label: "Material", type: "text" },
                 { key: "height", label: "Height", type: "text" },
                 { key: "weight", label: "Weight", type: "text" },
-                { key: "image", label: "Image URL", type: "text" },
               ].map((f) => (
                 <div key={f.key}>
                   <label className="font-body text-sm font-medium text-foreground mb-1 block">{f.label}</label>
@@ -116,7 +162,7 @@ const AdminIdols = () => {
               </div>
               <div className="flex items-center gap-3">
                 <label className="font-body text-sm font-medium text-foreground">In Stock</label>
-                <input type="checkbox" checked={form.inStock} onChange={(e) => setForm((f) => ({ ...f, inStock: e.target.checked }))} className="rounded" />
+                <input type="checkbox" checked={form.in_stock} onChange={(e) => setForm((f) => ({ ...f, in_stock: e.target.checked }))} className="rounded" />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
@@ -130,21 +176,21 @@ const AdminIdols = () => {
       </AnimatePresence>
 
       <div className="space-y-3">
-        {idols.map((idol, i) => (
+        {idols.map((idol: any, i: number) => (
           <motion.div
-            key={idol.id}
+            key={String(idol.id)}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.04 }}
             className="flex items-center gap-4 p-4 bg-card rounded-xl shadow-card border border-border hover:border-primary/20 transition-colors"
           >
-            <img src={idol.image} alt={idol.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+            <img src={getImage(idol)} alt={getName(idol)} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <h4 className="font-display text-sm font-semibold text-foreground truncate">{idol.name}</h4>
+              <h4 className="font-display text-sm font-semibold text-foreground truncate">{getName(idol)}</h4>
               <div className="flex items-center gap-3 mt-1">
                 <span className="font-body text-xs text-muted-foreground">{idol.deity}</span>
-                <span className="font-body text-xs font-medium text-primary">₹{idol.price.toLocaleString()}</span>
-                <span className={`font-body text-xs ${idol.inStock ? "text-primary" : "text-destructive"}`}>{idol.inStock ? "In Stock" : "Out of Stock"}</span>
+                <span className="font-body text-xs font-medium text-primary">₹{getPrice(idol).toLocaleString()}</span>
+                <span className={`font-body text-xs ${isInStock(idol) ? "text-primary" : "text-destructive"}`}>{isInStock(idol) ? "In Stock" : "Out of Stock"}</span>
               </div>
             </div>
             <div className="flex gap-2">
