@@ -5,7 +5,7 @@ import { normalizeList } from "@/lib/normalize";
 interface AdminContextType {
   isAdmin: boolean;
   adminLoading: boolean;
-  login: (password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   // Data
   poojas: any[];
@@ -83,9 +83,9 @@ export const AdminProvider = ({ children }: { children: ReactNode }) => {
     fetchPublicData();
   }, [fetchPublicData]);
 
-  const login = async (password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const res = await adminAuthApi.login(password);
+      const res = await adminAuthApi.login({ username, password });
       setAdminToken(res.token);
       setIsAdmin(true);
       return true;

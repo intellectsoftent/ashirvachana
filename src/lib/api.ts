@@ -76,11 +76,20 @@ export const authApi = {
 
 // ─── Admin Auth API ──────────────────────────────────────
 export const adminAuthApi = {
-  login: (password: string) =>
-    apiFetch<{ token: string }>("/api/admin/login", { method: "POST", body: JSON.stringify({ password }) }),
+  login: (body: { username: string; password: string }) =>
+    apiFetch<{ token: string; admin: any }>("/api/admin/login", { method: "POST", body: JSON.stringify(body) }),
 
   verify: () =>
     apiFetch("/api/admin/verify", { token: getAdminToken() }),
+
+  forgotPassword: (email: string) =>
+    apiFetch<{ success: boolean; message: string }>("/api/admin/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
+
+  verifyOtp: (email: string, otp: string) =>
+    apiFetch<{ success: boolean; message: string; reset_token: string }>("/api/admin/verify-otp", { method: "POST", body: JSON.stringify({ email, otp }) }),
+
+  resetPassword: (reset_token: string, new_password: string) =>
+    apiFetch<{ success: boolean; message: string }>("/api/admin/reset-password", { method: "POST", body: JSON.stringify({ reset_token, new_password }) }),
 };
 
 // ─── Poojas API ──────────────────────────────────────────
