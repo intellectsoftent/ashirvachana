@@ -230,11 +230,16 @@ export const cartApi = {
 
 // ─── Orders API ──────────────────────────────────────────
 export const ordersApi = {
-  // User
+  // User (logged in)
   createRazorpayOrder: (body: { amount: number; currency?: string; receipt?: string }) =>
     apiFetch<any>("/api/orders/create-razorpay-order", { method: "POST", token: getUserToken(), body: JSON.stringify(body) }),
   place: (body: Record<string, any>) =>
     apiFetch<any>("/api/orders/place", { method: "POST", token: getUserToken(), body: JSON.stringify(body) }),
+  // Guest (pooja checkout without login — no token)
+  createRazorpayOrderGuest: (body: { amount: number; currency?: string; receipt?: string }) =>
+    apiFetch<any>("/api/orders/create-razorpay-order", { method: "POST", body: JSON.stringify(body) }),
+  placeGuest: (body: Record<string, any>) =>
+    apiFetch<any>("/api/orders/place", { method: "POST", body: JSON.stringify(body) }),
   getMyOrders: () =>
     apiFetch<any[]>("/api/orders/my-orders", { token: getUserToken() }),
   getById: (id: string | number) =>

@@ -24,10 +24,17 @@ const Login = () => {
     const success = await login(email, password);
     setSubmitting(false);
     if (success) {
-      toast({ title: "Welcome back! 🙏", description: "You have been logged in successfully." });
+      toast({
+        title: "Welcome back! 🙏",
+        description: "You have been logged in successfully.",
+      });
       navigate("/");
     } else {
-      toast({ title: "Invalid credentials", description: "Please check your email and password.", variant: "destructive" });
+      toast({
+        title: "Invalid credentials",
+        description: "Please check your email and password.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -35,16 +42,28 @@ const Login = () => {
     <div className="min-h-screen flex">
       {/* Left - Decorative Panel */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-hero items-center justify-center">
-        <img src={mandalaPattern} alt="" className="absolute inset-0 w-full h-full object-cover opacity-10" />
+        <img
+          src={mandalaPattern}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover opacity-10"
+        />
         <div className="absolute inset-0 bg-gradient-to-br from-maroon/90 via-temple-brown/80 to-maroon/90" />
-        
+
         {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
             className="absolute w-3 h-3 rounded-full bg-gold/20"
             style={{ left: `${10 + i * 12}%`, top: `${15 + (i % 4) * 20}%` }}
-            animate={{ y: [0, -40, 0], opacity: [0.2, 0.6, 0.2], scale: [1, 1.3, 1] }}
-            transition={{ duration: 4 + i * 0.5, repeat: Infinity, delay: i * 0.3 }}
+            animate={{
+              y: [0, -40, 0],
+              opacity: [0.2, 0.6, 0.2],
+              scale: [1, 1.3, 1],
+            }}
+            transition={{
+              duration: 4 + i * 0.5,
+              repeat: Infinity,
+              delay: i * 0.3,
+            }}
           />
         ))}
 
@@ -61,8 +80,12 @@ const Login = () => {
             animate={{ y: [0, -10, 0] }}
             transition={{ duration: 4, repeat: Infinity }}
           />
-          <h2 className="font-display text-4xl font-bold text-cream mb-4">Welcome Back</h2>
-          <p className="font-body text-cream/70 text-lg">Continue your spiritual journey with us</p>
+          <h2 className="font-display text-4xl font-bold text-cream mb-4">
+            Welcome Back
+          </h2>
+          <p className="font-body text-cream/70 text-lg">
+            Continue your spiritual journey with us
+          </p>
           <div className="mt-8 flex justify-center gap-6">
             {["500+ Poojas", "50+ Priests", "20+ Cities"].map((stat, i) => (
               <motion.div
@@ -72,7 +95,9 @@ const Login = () => {
                 transition={{ delay: 0.5 + i * 0.2 }}
                 className="text-center"
               >
-                <div className="font-display text-gold text-sm font-semibold">{stat}</div>
+                <div className="font-display text-gold text-sm font-semibold">
+                  {stat}
+                </div>
               </motion.div>
             ))}
           </div>
@@ -88,18 +113,34 @@ const Login = () => {
           className="w-full max-w-md"
         >
           <Link to="/" className="flex items-center gap-3 mb-10 lg:hidden">
-            <img src={logoIcon} alt="DivineConnect" className="w-12 h-12 rounded-xl" />
-            <span className="font-display font-bold text-2xl text-foreground">DivineConnect</span>
+            <img
+              src={logoIcon}
+              alt="DivineConnect"
+              className="w-12 h-12 rounded-xl"
+            />
+            <span className="font-display font-bold text-2xl text-foreground">
+              DivineConnect
+            </span>
           </Link>
 
           <div className="mb-8">
-            <h1 className="font-display text-3xl font-bold text-foreground">Sign In</h1>
-            <p className="font-body text-muted-foreground mt-2">Enter your credentials to access your account</p>
+            <h1 className="font-display text-3xl font-bold text-foreground">
+              Sign In
+            </h1>
+            <p className="font-body text-muted-foreground mt-2">
+              Enter your credentials to access your account
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-              <label className="font-body text-sm font-medium text-foreground mb-2 block">Email</label>
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <label className="font-body text-sm font-medium text-foreground mb-2 block">
+                Email
+              </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -113,8 +154,14 @@ const Login = () => {
               </div>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              <label className="font-body text-sm font-medium text-foreground mb-2 block">Password</label>
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <label className="font-body text-sm font-medium text-foreground mb-2 block">
+                Password
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -130,7 +177,11 @@ const Login = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </motion.div>
@@ -138,24 +189,39 @@ const Login = () => {
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" className="rounded border-border" />
-                <span className="font-body text-sm text-muted-foreground">Remember me</span>
+                <span className="font-body text-sm text-muted-foreground">
+                  Remember me
+                </span>
               </label>
-              <a href="#" className="font-body text-sm text-primary hover:underline">Forgot password?</a>
+              <a
+                href="#"
+                className="font-body text-sm text-primary hover:underline"
+              >
+                Forgot password?
+              </a>
             </div>
 
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
               <Button
                 type="submit"
                 disabled={submitting}
                 className="w-full h-12 bg-gradient-gold text-primary-foreground font-body font-semibold text-base hover:opacity-90 transition-all glow-saffron"
               >
-                {submitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
+                {submitting ? (
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="w-5 h-5 mr-2" />
+                )}
                 {submitting ? "Signing in..." : "Sign In"}
               </Button>
             </motion.div>
           </form>
 
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-8">
+          {/* <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-8">
             <div className="ornament-divider text-muted-foreground text-sm font-body mb-6">or continue with</div>
             <div className="grid grid-cols-2 gap-3">
               <Button variant="outline" className="h-12 font-body">
@@ -167,11 +233,16 @@ const Login = () => {
                 GitHub
               </Button>
             </div>
-          </motion.div>
+          </motion.div> */}
 
           <p className="text-center font-body text-sm text-muted-foreground mt-8">
             Don't have an account?{" "}
-            <Link to="/signup" className="text-primary font-semibold hover:underline">Sign Up</Link>
+            <Link
+              to="/signup"
+              className="text-primary font-semibold hover:underline"
+            >
+              Sign Up
+            </Link>
           </p>
         </motion.div>
       </div>

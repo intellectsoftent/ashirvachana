@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Star, ArrowLeft, Clock, Check, Phone, Shield, Calendar, LogIn, MapPin, User } from "lucide-react";
+import { Star, ArrowLeft, Clock, Check, Phone, Shield, Calendar, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAdmin } from "@/context/AdminContext";
 import { useUser } from "@/context/UserContext";
@@ -31,7 +31,6 @@ const PoojaDetail = () => {
   const price = pooja.price || 0;
   const origPrice = pooja.original_price || pooja.originalPrice || price;
   const discount = origPrice > price ? Math.round((1 - price / origPrice) * 100) : 0;
-  const advancePercent = pooja.advance_percent || 30;
 
   const highlights = [
     { icon: Clock, label: "Duration", value: pooja.duration },
@@ -154,29 +153,14 @@ const PoojaDetail = () => {
               ) : null;
             })()}
 
-            {/* Payment Info */}
-            <div className="mt-6 bg-primary/5 border border-primary/20 rounded-xl p-4">
-              <p className="font-body text-sm font-medium text-foreground mb-1">💡 Partial Payment Available</p>
-              <p className="font-body text-xs text-muted-foreground">
-                Pay just <span className="font-semibold text-primary">₹{Math.round(price * advancePercent / 100).toLocaleString()} ({advancePercent}% advance)</span> to confirm your booking.
-              </p>
-            </div>
-
             {/* CTAs */}
             <div className="flex gap-4 mt-8">
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
                 <Button
-                  onClick={() => {
-                    if (!isLoggedIn) {
-                      toast({ title: "Please login first", description: "You need to login to book a pooja.", variant: "destructive" });
-                      navigate("/login");
-                      return;
-                    }
-                    toast({ title: "Booking initiated! 🙏", description: "Our team will contact you shortly to confirm." });
-                  }}
+                  onClick={() => navigate(`/checkout/pooja/${pooja.id}`)}
                   className="w-full h-14 bg-gradient-gold text-primary-foreground font-body font-semibold text-base hover:opacity-90 glow-saffron rounded-xl"
                 >
-                  {isLoggedIn ? (<><Calendar className="w-5 h-5 mr-2" /> Book Now — ₹{Math.round(price * advancePercent / 100).toLocaleString()} Advance</>) : (<><LogIn className="w-5 h-5 mr-2" /> Login to Book</>)}
+                  <Calendar className="w-5 h-5 mr-2" /> Book Now — ₹{price.toLocaleString()}
                 </Button>
               </motion.div>
               <a href="tel:+918500087012">

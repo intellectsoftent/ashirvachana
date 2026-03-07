@@ -15,6 +15,7 @@ import IdolDetail from "./pages/IdolDetail";
 import Cart from "./pages/Cart";
 import Poojas from "./pages/Poojas";
 import PoojaDetail from "./pages/PoojaDetail";
+import PoojaCheckout from "./pages/PoojaCheckout";
 import Blogs from "./pages/Blogs";
 import BlogDetail from "./pages/BlogDetail";
 import AdminLogin from "./pages/AdminLogin";
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/cart" element={<Cart />} />
               <Route path="/poojas" element={<Poojas />} />
               <Route path="/poojas/:id" element={<PoojaDetail />} />
+              <Route path="/checkout/pooja/:id" element={<PoojaCheckout />} />
               <Route path="/blog" element={<Blogs />} />
               <Route path="/blog/:id" element={<BlogDetail />} />
               <Route path="/cancellation-policy" element={<CancellationPolicy />} />

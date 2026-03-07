@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Package, Eye, UserCheck, AlertCircle } from "lucide-react";
+import { Package, Eye, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useOrders, Order } from "@/context/OrderContext";
@@ -30,14 +30,8 @@ const AdminOrders = () => {
     }
   };
 
-  const pendingPayments = orders.filter((o) => {
-    const balance = (o.balanceDue ?? o.balance_due ?? 0);
-    return balance > 0 && o.status !== "cancelled";
-  });
 
-  const getTotal = (o: Order) => o.totalWithGST ?? o.total_amount ?? 0;
-  const getAdvance = (o: Order) => o.advancePaid ?? o.advance_paid ?? getTotal(o);
-  const getBalance = (o: Order) => o.balanceDue ?? o.balance_due ?? 0;
+  const getTotal = (o: Order) => Number(o.totalWithGST ?? o.total_amount ?? 0);
   const getName = (o: Order) => o.customerName ?? o.customer_name ?? "";
   const getPhone = (o: Order) => o.customerPhone ?? o.customer_phone ?? "";
   const getEmail = (o: Order) => o.customerEmail ?? o.customer_email ?? "";
@@ -54,23 +48,20 @@ const AdminOrders = () => {
       </div>
 
       {orders.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div className="bg-card rounded-xl shadow-card border border-border p-4">
             <p className="font-body text-xs text-muted-foreground">Total Revenue</p>
             <p className="font-display text-2xl font-bold text-foreground mt-1">
-              ₹{orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + getTotal(o), 0).toLocaleString()}
+              ₹{orders
+                .filter((o) => o.status !== "cancelled")
+                .reduce((s, o) => s + Number(getTotal(o) || 0), 0)
+                .toLocaleString("en-IN")}
             </p>
           </div>
           <div className="bg-card rounded-xl shadow-card border border-border p-4">
-            <p className="font-body text-xs text-muted-foreground">Advance Collected</p>
+            <p className="font-body text-xs text-muted-foreground">Total Orders</p>
             <p className="font-display text-2xl font-bold text-primary mt-1">
-              ₹{orders.filter(o => o.status !== "cancelled").reduce((s, o) => s + getAdvance(o), 0).toLocaleString()}
-            </p>
-          </div>
-          <div className="bg-card rounded-xl shadow-card border border-border p-4">
-            <p className="font-body text-xs text-muted-foreground">Balance Pending</p>
-            <p className="font-display text-2xl font-bold text-destructive mt-1">
-              ₹{pendingPayments.reduce((s, o) => s + getBalance(o), 0).toLocaleString()}
+              {orders.filter((o) => o.status !== "cancelled").length}
             </p>
           </div>
         </div>
@@ -112,11 +103,6 @@ const AdminOrders = () => {
                     <span className="font-body text-xs text-muted-foreground">{getName(order)}</span>
                     <span className="font-body text-xs text-muted-foreground">{getLocation(order)}</span>
                     <span className="font-body text-xs font-medium text-primary">₹{getTotal(order).toLocaleString()}</span>
-                    {getBalance(order) > 0 && (
-                      <span className="font-body text-xs font-medium text-destructive flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> Balance: ₹{getBalance(order).toLocaleString()}
-                      </span>
-                    )}
                     {getDate(order) && (
                       <span className="font-body text-xs text-muted-foreground">
                         {new Date(getDate(order)).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
@@ -157,29 +143,19 @@ const AdminOrders = () => {
                       <p className="font-body text-xs text-muted-foreground mb-1">Items</p>
                       {(order.items || []).map((item: any, idx: number) => (
                         <div key={idx} className="flex items-center gap-2 mb-1">
-                          {item.image && <img src={item.image || item.image_url} alt={item.name} className="w-8 h-8 rounded object-cover" />}
-                          <span className="font-body text-sm text-foreground">{item.name} x{item.quantity || 1}</span>
-                          <span className="font-body text-xs text-primary ml-auto">₹{((item.price || 0) * (item.quantity || 1)).toLocaleString()}</span>
+                          {(item.item_image || item.image || item.image_url) && <img src={item.item_image || item.image || item.image_url} alt={item.item_name || item.name} className="w-8 h-8 rounded object-cover" />}
+                          <span className="font-body text-sm text-foreground">{item.item_name || item.name} x{item.quantity || 1}</span>
+                          <span className="font-body text-xs text-primary ml-auto">₹{((item.unit_price || item.price || 0) * (item.quantity || 1)).toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
                     <div>
                       <p className="font-body text-xs text-muted-foreground mb-1">Payment</p>
-                      <div className="bg-secondary/50 rounded-lg p-3 space-y-2">
+                      <div className="bg-secondary/50 rounded-lg p-3">
                         <div className="flex justify-between font-body text-sm">
                           <span className="text-muted-foreground">Total</span>
                           <span className="font-medium text-foreground">₹{getTotal(order).toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between font-body text-sm">
-                          <span className="text-muted-foreground">Advance Paid</span>
-                          <span className="font-medium text-primary">₹{getAdvance(order).toLocaleString()}</span>
-                        </div>
-                        {getBalance(order) > 0 && (
-                          <div className="flex justify-between font-body text-sm border-t border-border pt-2">
-                            <span className="text-destructive font-medium">Balance Due</span>
-                            <span className="font-bold text-destructive">₹{getBalance(order).toLocaleString()}</span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>

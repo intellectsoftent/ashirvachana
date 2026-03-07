@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ShoppingCart, Star, Search, MapPin } from "lucide-react";
+import { ShoppingCart, Star, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/CartContext";
 import { useAdmin } from "@/context/AdminContext";
+import { idolsApi, locationsApi } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -16,8 +17,32 @@ const Idols = () => {
   const [selectedDeity, setSelectedDeity] = useState("All");
   const [selectedMaterial, setSelectedMaterial] = useState("All Materials");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedLocationId, setSelectedLocationId] = useState<string>("");
+  const [locations, setLocations] = useState<{ id: number; name: string }[]>([]);
+  const [locationIdols, setLocationIdols] = useState<any[] | null>(null);
   const { addToCart } = useCart();
-  const { idols = [] } = useAdmin();
+  const { idols: contextIdols = [] } = useAdmin();
+
+  const idols = selectedLocationId && locationIdols !== null ? locationIdols : contextIdols;
+
+  useEffect(() => {
+    locationsApi.getAll().then((res: any) => {
+      const list = Array.isArray(res) ? res : res?.data ?? [];
+      setLocations(list);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!selectedLocationId) {
+      setLocationIdols(null);
+      return;
+    }
+    setLocationIdols([]);
+    idolsApi.getAll({ location_id: selectedLocationId }).then((res: any) => {
+      const list = Array.isArray(res) ? res : res?.data ?? [];
+      setLocationIdols(list);
+    }).catch(() => setLocationIdols([]));
+  }, [selectedLocationId]);
 
   const getImage = (idol: any) => idol.image_url || idol.image || "";
   const getName = (idol: any) => idol.name || "";
@@ -52,11 +77,17 @@ const Idols = () => {
 
       <div className="container mx-auto px-4 py-12">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col gap-4 mb-10">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-4 flex-wrap">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input placeholder="Search idols..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-11 h-12 bg-secondary/50 font-body" />
             </div>
+            <select value={selectedLocationId} onChange={(e) => setSelectedLocationId(e.target.value)} className="h-12 px-4 rounded-md border border-input bg-secondary/50 font-body text-sm text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring max-w-xs">
+              <option value="">All Locations</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={String(loc.id)}>{loc.name}</option>
+              ))}
+            </select>
             <select value={selectedMaterial} onChange={(e) => setSelectedMaterial(e.target.value)} className="h-12 px-4 rounded-md border border-input bg-secondary/50 font-body text-sm text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring max-w-xs">
               {materials.map((mat) => (<option key={mat} value={mat}>{mat}</option>))}
             </select>
