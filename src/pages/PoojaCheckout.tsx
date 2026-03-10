@@ -32,6 +32,8 @@ const PoojaCheckout = () => {
   const [poojaDate, setPoojaDate] = useState("");
   const [poojaTime, setPoojaTime] = useState("");
   const [notes, setNotes] = useState("");
+  const [paymentMode, setPaymentMode] = useState<"full" | "partial">("full");
+  const [customAmount, setCustomAmount] = useState<string>("");
 
   useEffect(() => {
     if (!id) return;
@@ -59,9 +61,20 @@ const PoojaCheckout = () => {
   }, [isLoggedIn, user]);
 
   const price = pooja ? parseFloat(pooja.price) : 0;
+  const payableAmount =
+    paymentMode === "full"
+      ? price
+      : Math.min(
+          price,
+          Number.isFinite(Number(customAmount)) ? Number(customAmount) || 0 : 0,
+        );
 
   const handlePayment = async () => {
-    if (!customerName.trim() || !customerPhone.trim() || !customerEmail.trim()) {
+    if (
+      !customerName.trim() ||
+      !customerPhone.trim() ||
+      !customerEmail.trim()
+    ) {
       toast({
         title: "Required fields missing",
         description: "Please enter your name, phone and email.",
@@ -81,7 +94,25 @@ const PoojaCheckout = () => {
     if (!razorpayKey) {
       toast({
         title: "Payment not configured",
-        description: "Razorpay key is missing. Add VITE_RAZORPAY_KEY_ID to .env",
+        description:
+          "Razorpay key is missing. Add VITE_RAZORPAY_KEY_ID to .env",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!payableAmount || payableAmount <= 0) {
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid amount to pay.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (payableAmount > price) {
+      toast({
+        title: "Amount too high",
+        description: "You cannot pay more than the full pooja amount.",
         variant: "destructive",
       });
       return;
@@ -89,8 +120,10 @@ const PoojaCheckout = () => {
 
     try {
       setPlacing(true);
-      const createOrder = isLoggedIn ? ordersApi.createRazorpayOrder : ordersApi.createRazorpayOrderGuest;
-      const res = await createOrder({ amount: price, currency: "INR" });
+      const createOrder = isLoggedIn
+        ? ordersApi.createRazorpayOrder
+        : ordersApi.createRazorpayOrderGuest;
+      const res = await createOrder({ amount: payableAmount, currency: "INR" });
       if (!res?.razorpay_order_id || !res?.key_id) {
         throw new Error(res?.message || "Failed to create payment order");
       }
@@ -123,11 +156,14 @@ const PoojaCheckout = () => {
               customer_email: customerEmail,
               notes: notes || undefined,
               payment_method: "razorpay",
+              paid_amount: payableAmount,
               razorpay_order_id: paymentResponse.razorpay_order_id,
               razorpay_payment_id: paymentResponse.razorpay_payment_id,
               razorpay_signature: paymentResponse.razorpay_signature,
             };
-            const placeOrder = isLoggedIn ? ordersApi.place : ordersApi.placeGuest;
+            const placeOrder = isLoggedIn
+              ? ordersApi.place
+              : ordersApi.placeGuest;
             const result = await placeOrder(placePayload);
             toast({
               title: "Booking confirmed! 🙏",
@@ -161,7 +197,9 @@ const PoojaCheckout = () => {
   if (loading || !pooja) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse font-body text-muted-foreground">Loading...</div>
+        <div className="animate-pulse font-body text-muted-foreground">
+          Loading...
+        </div>
       </div>
     );
   }
@@ -186,7 +224,8 @@ const PoojaCheckout = () => {
             Checkout — {pooja.title}
           </h1>
           <p className="font-body text-muted-foreground mb-6">
-            Fill in your details below. Payment is required to confirm your booking.
+            Fill in your details below. Payment is required to confirm your
+            booking.
           </p>
 
           <div className="space-y-4">
@@ -268,17 +307,53 @@ const PoojaCheckout = () => {
             />
           </div>
 
-          <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
-            <div>
-              <span className="font-body text-muted-foreground">Amount to pay</span>
-              <p className="font-display text-xl font-bold text-foreground">
-                ₹{price.toLocaleString()}
-              </p>
+          <div className="mt-6 flex flex-col items-start gap-4 justify-between border-t border-border pt-4">
+            <div className="flex justify-between items-center w-full">
+              <div className="w-full">
+                <span className="font-body text-muted-foreground">
+                  Amount to pay
+                </span>
+                <p className="font-display text-xl font-bold text-foreground">
+                  ₹{payableAmount.toLocaleString()}
+                </p>
+              </div>
+              <div className="mt-3 space-y-2 w-full">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={paymentMode === "full" ? "default" : "outline"}
+                    className="font-body text-sm"
+                    onClick={() => setPaymentMode("full")}
+                  >
+                    Pay full (₹{price.toLocaleString()})
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={paymentMode === "partial" ? "default" : "outline"}
+                    className="font-body text-sm"
+                    onClick={() => setPaymentMode("partial")}
+                  >
+                    Pay custom amount
+                  </Button>
+                </div>
+                {paymentMode === "partial" && (
+                  <Input
+                    type="number"
+                    min={1}
+                    max={price}
+                    placeholder="Enter amount you wish to pay now"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    className="bg-secondary/50 font-body"
+                  />
+                )}
+              </div>
             </div>
+
             <Button
               onClick={handlePayment}
               disabled={placing}
-              className="h-12 px-8 bg-gradient-gold text-primary-foreground font-body font-semibold hover:opacity-90 glow-saffron rounded-xl"
+              className="h-12 w-full px-8 bg-gradient-gold text-primary-foreground font-body font-semibold hover:opacity-90 glow-saffron rounded-xl"
             >
               {placing ? (
                 "Opening payment..."
