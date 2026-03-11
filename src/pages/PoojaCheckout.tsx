@@ -33,7 +33,6 @@ const PoojaCheckout = () => {
   const [poojaTime, setPoojaTime] = useState("");
   const [notes, setNotes] = useState("");
   const [paymentMode, setPaymentMode] = useState<"full" | "partial">("full");
-  const [customAmount, setCustomAmount] = useState<string>("");
 
   useEffect(() => {
     if (!id) return;
@@ -61,13 +60,10 @@ const PoojaCheckout = () => {
   }, [isLoggedIn, user]);
 
   const price = pooja ? parseFloat(pooja.price) : 0;
-  const payableAmount =
-    paymentMode === "full"
-      ? price
-      : Math.min(
-          price,
-          Number.isFinite(Number(customAmount)) ? Number(customAmount) || 0 : 0,
-        );
+  const advancePercent = pooja?.advance_percent ?? 30;
+  const advanceAmount =
+    price && advancePercent ? Math.round((price * Number(advancePercent)) / 100) : 0;
+  const payableAmount = paymentMode === "full" ? price : advanceAmount;
 
   const handlePayment = async () => {
     if (
@@ -157,6 +153,7 @@ const PoojaCheckout = () => {
               notes: notes || undefined,
               payment_method: "razorpay",
               paid_amount: payableAmount,
+              payment_mode: paymentMode,
               razorpay_order_id: paymentResponse.razorpay_order_id,
               razorpay_payment_id: paymentResponse.razorpay_payment_id,
               razorpay_signature: paymentResponse.razorpay_signature,
@@ -307,17 +304,22 @@ const PoojaCheckout = () => {
             />
           </div>
 
-          <div className="mt-6 flex flex-col items-start gap-4 justify-between border-t border-border pt-4">
-            <div className="flex justify-between items-center w-full">
-              <div className="w-full">
+          <div className="mt-6 flex flex-col gap-4 border-t border-border pt-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
                 <span className="font-body text-muted-foreground">
-                  Amount to pay
+                  Amount to pay now
                 </span>
                 <p className="font-display text-xl font-bold text-foreground">
                   ₹{payableAmount.toLocaleString()}
                 </p>
+                {paymentMode === "partial" && (
+                  <p className="font-body text-xs text-muted-foreground mt-1">
+                    You are paying {advancePercent}% now. Remaining will be collected before the pooja.
+                  </p>
+                )}
               </div>
-              <div className="mt-3 space-y-2 w-full">
+              <div className="space-y-2">
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -333,20 +335,9 @@ const PoojaCheckout = () => {
                     className="font-body text-sm"
                     onClick={() => setPaymentMode("partial")}
                   >
-                    Pay custom amount
+                    Pay advance ({advancePercent}%)
                   </Button>
                 </div>
-                {paymentMode === "partial" && (
-                  <Input
-                    type="number"
-                    min={1}
-                    max={price}
-                    placeholder="Enter amount you wish to pay now"
-                    value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
-                    className="bg-secondary/50 font-body"
-                  />
-                )}
               </div>
             </div>
 
