@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Pencil, Trash2, X, Save, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,14 @@ import { useAdmin } from "@/context/AdminContext";
 import { useToast } from "@/hooks/use-toast";
 import { toArray } from "@/lib/normalize";
 import { buildFormData } from "@/lib/formdata";
+import { locationsApi } from "@/lib/api";
 import ImageUploadField from "./ImageUploadField";
 
 const emptyForm = {
   name: "", deity: "", price: 0, original_price: 0, image_url: "",
   material: "", height: "", weight: "", description: "",
   features: [] as string[], in_stock: true, stock_quantity: 0,
-  is_featured: false, location_ids: [] as number[],
+  is_featured: false, location_ids: [] as (number | string)[],
 };
 
 const AdminIdols = () => {
@@ -23,7 +24,34 @@ const AdminIdols = () => {
   const [form, setForm] = useState(emptyForm);
   const [featureInput, setFeatureInput] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [locations, setLocations] = useState<{ id: number | string; name: string }[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await locationsApi.adminGetAll();
+        const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
+        if (mounted) setLocations(list);
+      } catch {
+        const data = await locationsApi.getAll().catch(() => []);
+        const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
+        if (mounted) setLocations(list);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const locationOptions = useMemo(
+    () =>
+      [...locations].sort((a, b) =>
+        String(a.name ?? "").localeCompare(String(b.name ?? ""), undefined, { sensitivity: "base" })
+      ),
+    [locations]
+  );
 
   const handleEdit = (idol: any) => {
     setEditing(idol.id);
@@ -41,10 +69,21 @@ const AdminIdols = () => {
       in_stock: idol.in_stock ?? idol.inStock ?? true,
       stock_quantity: idol.stock_quantity || 0,
       is_featured: idol.is_featured || false,
-      location_ids: idol.location_ids || [],
+      location_ids: idol.location_ids || idol.locations?.map((l: any) => l?.id).filter(Boolean) || [],
     });
     setImageFile(null);
     setIsAdding(false);
+  };
+
+  const toggleLocation = (id: number | string, checked: boolean) => {
+    setForm((f) => {
+      const normalizedId = String(id);
+      const existing = (f.location_ids || []).map(String);
+      const next = checked
+        ? Array.from(new Set([...existing, normalizedId]))
+        : existing.filter((x) => x !== normalizedId);
+      return { ...f, location_ids: next };
+    });
   };
 
   const handleSave = async () => {
@@ -163,6 +202,33 @@ const AdminIdols = () => {
               <div className="flex items-center gap-3">
                 <label className="font-body text-sm font-medium text-foreground">In Stock</label>
                 <input type="checkbox" checked={form.in_stock} onChange={(e) => setForm((f) => ({ ...f, in_stock: e.target.checked }))} className="rounded" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="font-body text-sm font-medium text-foreground mb-1 block">Locations</label>
+                {locationOptions.length === 0 ? (
+                  <div className="text-sm font-body text-muted-foreground bg-secondary/30 border border-border rounded-lg p-3">
+                    No locations found. Add locations from the “Location Master” tab first.
+                  </div>
+                ) : (
+                  <div className="max-h-44 overflow-auto rounded-lg border border-border bg-secondary/20 p-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {locationOptions.map((loc) => {
+                        const checked = (form.location_ids || []).map(String).includes(String(loc.id));
+                        return (
+                          <label key={String(loc.id)} className="flex items-center gap-2 font-body text-sm text-foreground">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => toggleLocation(loc.id, e.target.checked)}
+                              className="rounded"
+                            />
+                            <span className="truncate">{loc.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">

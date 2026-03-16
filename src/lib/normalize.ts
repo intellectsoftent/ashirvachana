@@ -20,6 +20,18 @@ export function normalizeItem(item: Record<string, any>): Record<string, any> {
     // Always normalize — set to [] even if field is missing/null/undefined
     copy[field] = toArray(copy[field]);
   }
+  // If backend returns locations via Sequelize include, derive location_ids for UI/forms.
+  if (
+    Array.isArray(copy.locations) &&
+    copy.locations.length > 0 &&
+    Array.isArray(copy.location_ids) &&
+    copy.location_ids.length === 0
+  ) {
+    copy.location_ids = copy.locations
+      .map((l: any) => l?.id)
+      .filter((id: any) => id !== undefined && id !== null)
+      .map((id: any) => String(id));
+  }
   return copy;
 }
 
